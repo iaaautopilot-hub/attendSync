@@ -51,15 +51,17 @@ export const validateLogin = async (username, password) => {
   try {
     isMatch = bcrypt.compareSync(password, user.password);
   } catch (e) {
-    // If it's not a hash, check for plain-text (migration)
-    isMatch = (password === user.password);
-    
-    if (isMatch) {
-      console.log('Plain-text password detected. Upgrading to hash...');
-      const salt = bcrypt.genSaltSync(10);
-      const hash = bcrypt.hashSync(password, salt);
-      await supabase.from('users').update({ password: hash }).eq('staff_id', user.staff_id);
-    }
+    // Malformed hash or plain text
+    isMatch = false;
+  }
+
+  // If no hash match, check for plain-text (migration path)
+  if (!isMatch && password === user.password) {
+    console.log('Plain-text password detected. Upgrading to hash...');
+    const salt = bcrypt.genSaltSync(10);
+    const hash = bcrypt.hashSync(password, salt);
+    await supabase.from('users').update({ password: hash }).eq('staff_id', user.staff_id);
+    isMatch = true;
   }
 
   if (!isMatch) {
