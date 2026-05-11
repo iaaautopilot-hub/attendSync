@@ -86,20 +86,20 @@ const CreateEvent = () => {
       const leaderName = primaryLeaderObj?.name || primaryLeaderObj?.full_name || 'Leader';
 
       // Mailto approach (Option 2)
-      const subject = encodeURIComponent(`New Event Assignment - ${event.name}`);
+      const subject = encodeURIComponent(`New Event Assignment - ${formData.name}`);
       
       const emailBody = `Hi ${leaderName},
 
 You have been assigned as the primary ${leaderRole} for the following event:
 
 Event Details:
-- Subject: ${event.name}
-- Type: ${event.type}
-- Date: ${event.date}
-- Time: ${event.time}
-- Department: ${event.department}
-- Venue: ${event.venue}
-- Room: ${event.room}
+- Subject: ${formData.name}
+- Type: ${formData.type}
+- Date: ${formData.date}
+- Time: ${formData.time}
+- Department: ${formData.department}
+- Venue: ${formData.venue}
+- Room: ${formData.room}
 
 Please log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!
 
