@@ -91,9 +91,15 @@ const CreateEvent = () => {
       
       // Open the user's default email client
       window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      
+      // Navigate to dashboard after a brief delay to ensure the mail client pops up first
+      setTimeout(() => {
+        navigate(`/dashboard/${event.id}`);
+      }, 800);
+      return;
     }
 
-    // Navigate to dashboard automatically
+    // Navigate to dashboard automatically (if no leaders)
     navigate(`/dashboard/${event.id}`);
   };
 
