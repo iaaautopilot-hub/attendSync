@@ -87,10 +87,28 @@ const CreateEvent = () => {
 
       // Mailto approach (Option 2)
       const subject = encodeURIComponent(`New Event Assignment - ${event.name}`);
-      const body = encodeURIComponent(`Hi ${leaderName},\n\nYou have been assigned as the primary ${leaderRole} for "${event.name}".\n\nPlease log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!\n\nAccess Link: ${eventLink}\n\nThank you.`);
       
-      // Use Google Workspace (Gmail) Compose Link instead of mailto
-      // This is perfect for AirAsia since you use Google Workspace!
+      const emailBody = `Hi ${leaderName},
+
+You have been assigned as the primary ${leaderRole} for the following event:
+
+Event Details:
+- Subject: ${event.name}
+- Type: ${event.type}
+- Date: ${event.date}
+- Time: ${event.time}
+- Department: ${event.department}
+- Venue: ${event.venue}
+- Room: ${event.room}
+
+Please log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!
+
+Access Link: ${eventLink}
+
+Thank you.`;
+
+      const body = encodeURIComponent(emailBody);
+      
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`;
       
       const mailtoLink = document.createElement('a');
