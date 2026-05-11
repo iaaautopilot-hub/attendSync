@@ -89,15 +89,18 @@ const CreateEvent = () => {
       const subject = encodeURIComponent(`New Event Assignment - ${event.name}`);
       const body = encodeURIComponent(`Hi ${leaderName},\n\nYou have been assigned as the primary ${leaderRole} for "${event.name}".\n\nPlease log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!\n\nAccess Link: ${eventLink}\n\nThank you.`);
       
-      // Use a hidden anchor tag (more reliable in modern browsers)
+      // Use Google Workspace (Gmail) Compose Link instead of mailto
+      // This is perfect for AirAsia since you use Google Workspace!
+      const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`;
+      
       const mailtoLink = document.createElement('a');
-      mailtoLink.href = `mailto:${email}?subject=${subject}&body=${body}`;
-      mailtoLink.target = '_blank';
+      mailtoLink.href = gmailUrl;
+      mailtoLink.target = '_blank'; // Opens Gmail in a new tab
       document.body.appendChild(mailtoLink);
       mailtoLink.click();
       document.body.removeChild(mailtoLink);
       
-      // Navigate to dashboard after a delay to ensure the mail client pops up first
+      // Navigate to dashboard after a delay
       setTimeout(() => {
         navigate(`/dashboard/${event.id}`);
       }, 1500);
