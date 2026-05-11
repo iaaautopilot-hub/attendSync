@@ -95,7 +95,7 @@ export const getCurrentUser = async () => {
     
   const user = data && data.length > 0 ? data[0] : null;
   if (error || !user) return session;
-  return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name, token: session.token };
+  return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name || 'Admin', token: session.token };
 };
 
 export const addUser = async (userData) => {
