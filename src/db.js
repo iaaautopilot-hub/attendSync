@@ -154,7 +154,7 @@ export const updateUser = async (userData) => {
       username: userData.username,
       // Only update password if explicitly provided and not empty
       ...(userData.password && userData.password !== '••••••••' ? { password: bcrypt.hashSync(userData.password, bcrypt.genSaltSync(10)) } : {}),
-      role_id: roleData.id,
+      role_id: roleId,
       email: userData.email,
       loa_no: userData.loaNo
     })
