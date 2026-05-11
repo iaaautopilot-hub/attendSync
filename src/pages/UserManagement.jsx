@@ -73,7 +73,7 @@ const UserManagement = () => {
       staffId: user.staff_id || '',
       username: user.username,
       email: user.email || '',
-      password: user.password,
+      password: '••••••••', // Placeholder to prevent hashing the hash
       role: user.role,
       loaNo: user.loa_no || '',
       original_staff_id: user.staff_id
