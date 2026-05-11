@@ -98,9 +98,18 @@ export const getCurrentUser = async () => {
   return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name || 'Admin', token: session.token };
 };
 
+const ROLE_MAP = {
+  'admin': '08db30cb-be6d-4880-bfb8-fc5372bab3ee',
+  'chairman': '2ac81965-9702-4886-9105-a060a74a06aa',
+  'instructor': 'dbf92d41-16b4-4b93-9a33-82148ba8ceec'
+};
+
+const getRoleId = (roleName) => {
+  return ROLE_MAP[roleName?.toLowerCase()] || null;
+};
+
 export const addUser = async (userData) => {
-  // We need to resolve the role_id first if it's passed as a name
-  const { data: role } = await supabase.from('roles').select('id').ilike('role_name', userData.role).single();
+  const roleId = getRoleId(userData.role);
   
   // Hash password before saving
   const salt = bcrypt.genSaltSync(10);
@@ -113,7 +122,7 @@ export const addUser = async (userData) => {
       full_name: userData.name,
       username: userData.username,
       password: hashedPassword,
-      role_id: role?.id,
+      role_id: roleId,
       email: userData.email,
       loa_no: userData.loaNo
     }])
@@ -129,14 +138,9 @@ export const addUser = async (userData) => {
 };
 
 export const updateUser = async (userData) => {
-  // 1. Find the correct Role ID (case-insensitive)
-  const { data: roleData } = await supabase
-    .from('roles')
-    .select('id')
-    .ilike('role_name', userData.role)
-    .single();
+  const roleId = getRoleId(userData.role);
 
-  if (!roleData) {
+  if (!roleId) {
     console.error('Role not found for:', userData.role);
     return { error: { message: `Role "${userData.role}" not found in database.` } };
   }
