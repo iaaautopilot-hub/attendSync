@@ -3,6 +3,22 @@ import bcrypt from 'bcryptjs';
 
 const AUTH_KEY = 'attendance_app_user';
 
+const ROLE_MAP = {
+  'admin': '08db30cb-be6d-4880-bfb8-fc5372bab3ee',
+  'chairman': '2ac81965-9702-4886-9105-a060a74a06aa',
+  'instructor': 'dbf92d41-16b4-4b93-9a33-82148ba8ceec'
+};
+
+const ROLE_ID_MAP = {
+  '08db30cb-be6d-4880-bfb8-fc5372bab3ee': 'Admin',
+  '2ac81965-9702-4886-9105-a060a74a06aa': 'Chairman',
+  'dbf92d41-16b4-4b93-9a33-82148ba8ceec': 'Instructor'
+};
+
+const getRoleId = (roleName) => {
+  return ROLE_MAP[roleName?.toLowerCase()] || null;
+};
+
 // --- AUTH & USER MANAGEMENT ---
 
 export const getAllUsers = async () => {
@@ -21,7 +37,7 @@ export const getAllUsers = async () => {
     name: u.full_name,
     role: u.roles?.role_name 
       ? u.roles.role_name.charAt(0).toUpperCase() + u.roles.role_name.slice(1) 
-      : 'Chairman',
+      : (ROLE_ID_MAP[u.role_id] || 'Chairman'),
     rank: u.rank?.rank_name || '',
     hub: u.hub?.hub_name || ''
   }));
@@ -70,7 +86,7 @@ export const validateLogin = async (username, password) => {
   }
 
   console.log('Login successful for:', user.full_name);
-  return { ...user, name: user.full_name, role: user.roles?.role_name || 'Admin' };
+  return { ...user, name: user.full_name, role: user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin' };
 };
 
 export const loginUser = (username, role) => {
@@ -95,18 +111,9 @@ export const getCurrentUser = async () => {
     
   const user = data && data.length > 0 ? data[0] : null;
   if (error || !user) return session;
-  return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name || 'Admin', token: session.token };
+  return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin', token: session.token };
 };
 
-const ROLE_MAP = {
-  'admin': '08db30cb-be6d-4880-bfb8-fc5372bab3ee',
-  'chairman': '2ac81965-9702-4886-9105-a060a74a06aa',
-  'instructor': 'dbf92d41-16b4-4b93-9a33-82148ba8ceec'
-};
-
-const getRoleId = (roleName) => {
-  return ROLE_MAP[roleName?.toLowerCase()] || null;
-};
 
 export const addUser = async (userData) => {
   const roleId = getRoleId(userData.role);
