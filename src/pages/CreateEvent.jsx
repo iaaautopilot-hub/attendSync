@@ -82,8 +82,15 @@ const CreateEvent = () => {
 
       const email = primaryLeaderObj?.email || 'unknown@company.com';
       const eventLink = `${window.location.origin}/dashboard/${event.id}`;
+      const leaderRole = event.type === 'Training' ? 'Instructor' : 'Chairman';
+      const leaderName = primaryLeaderObj?.name || primaryLeaderObj?.full_name || 'Leader';
 
-      alert(`[SIMULATED EMAIL SYSTEM]\n\nFrom: iaa_autopilot@airasia.com\nTo: ${email}\nSubject: New Event Assignment - ${event.name}\n\nHi ${primaryLeaderObj?.name || primaryLeaderObj?.full_name || 'Leader'},\n\nYou have been assigned as the primary ${event.type === 'Training' ? 'Instructor' : 'Chairman'} for "${event.name}".\n\nPlease log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!\n\nAccess Link: ${eventLink}`);
+      // Mailto approach (Option 2)
+      const subject = encodeURIComponent(`New Event Assignment - ${event.name}`);
+      const body = encodeURIComponent(`Hi ${leaderName},\n\nYou have been assigned as the primary ${leaderRole} for "${event.name}".\n\nPlease log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!\n\nAccess Link: ${eventLink}\n\nThank you.`);
+      
+      // Open the user's default email client
+      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
     }
 
     // Navigate to dashboard automatically
