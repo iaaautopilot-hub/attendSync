@@ -67,7 +67,7 @@ const UserManagement = () => {
   };
 
   const handleEditUser = (user) => {
-    setEditingUserId(user.id); // Use the guaranteed UUID instead of staff_id
+    setEditingUserId(user.staff_id); 
     setFormData({
       name: user.name,
       staffId: user.staff_id || '',
@@ -76,7 +76,7 @@ const UserManagement = () => {
       password: user.password,
       role: user.role,
       loaNo: user.loa_no || '',
-      original_id: user.id // Pass the id explicitly
+      original_staff_id: user.staff_id
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

@@ -157,7 +157,7 @@ export const updateUser = async (userData) => {
       email: userData.email,
       loa_no: userData.loaNo
     })
-    .eq(userData.original_id ? 'id' : 'staff_id', userData.original_id || userData.original_staff_id || userData.staffId)
+    .eq('staff_id', userData.original_staff_id || userData.staffId)
     .select();
 
   if (error) {
