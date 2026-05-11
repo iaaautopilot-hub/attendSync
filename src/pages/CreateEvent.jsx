@@ -82,7 +82,7 @@ const CreateEvent = () => {
 
       const email = primaryLeaderObj?.email || 'unknown@company.com';
       const eventLink = `${window.location.origin}/dashboard/${event.id}`;
-      const leaderRole = event.type === 'Training' ? 'Instructor' : 'Chairman';
+      const leaderRole = formData.type === 'Training' ? 'Instructor' : 'Chairman';
       const leaderName = primaryLeaderObj?.name || primaryLeaderObj?.full_name || 'Leader';
 
       // Mailto approach (Option 2)
