@@ -126,15 +126,14 @@ export const addUser = async (userData) => {
       email: userData.email,
       loa_no: userData.loaNo
     }])
-    .select()
-    .single();
+    .select();
 
   if (error) {
     console.error('Error adding user:', error);
     return { error };
   }
 
-  return { data };
+  return { data: data?.[0] || null };
 };
 
 export const updateUser = async (userData) => {
@@ -158,16 +157,15 @@ export const updateUser = async (userData) => {
       email: userData.email,
       loa_no: userData.loaNo
     })
-    .eq('staff_id', userData.original_staff_id || userData.staffId)
-    .select()
-    .single();
+    .eq(userData.original_id ? 'id' : 'staff_id', userData.original_id || userData.original_staff_id || userData.staffId)
+    .select();
 
   if (error) {
     console.error('Error updating user:', error);
     return { error };
   }
 
-  return { data };
+  return { data: data?.[0] || null };
 };
 export const updateUserSignature = async (staffId, signatureData) => {
   const { error } = await supabase

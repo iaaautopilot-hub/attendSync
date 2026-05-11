@@ -67,15 +67,16 @@ const UserManagement = () => {
   };
 
   const handleEditUser = (user) => {
-    setEditingUserId(user.staff_id || user.id);
+    setEditingUserId(user.id); // Use the guaranteed UUID instead of staff_id
     setFormData({
       name: user.name,
-      staffId: user.staff_id,
+      staffId: user.staff_id || '',
       username: user.username,
       email: user.email || '',
       password: user.password,
       role: user.role,
-      loaNo: user.loa_no || ''
+      loaNo: user.loa_no || '',
+      original_id: user.id // Pass the id explicitly
     });
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
