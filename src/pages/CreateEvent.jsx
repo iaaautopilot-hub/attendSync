@@ -89,13 +89,18 @@ const CreateEvent = () => {
       const subject = encodeURIComponent(`New Event Assignment - ${event.name}`);
       const body = encodeURIComponent(`Hi ${leaderName},\n\nYou have been assigned as the primary ${leaderRole} for "${event.name}".\n\nPlease log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!\n\nAccess Link: ${eventLink}\n\nThank you.`);
       
-      // Open the user's default email client
-      window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      // Use a hidden anchor tag (more reliable in modern browsers)
+      const mailtoLink = document.createElement('a');
+      mailtoLink.href = `mailto:${email}?subject=${subject}&body=${body}`;
+      mailtoLink.target = '_blank';
+      document.body.appendChild(mailtoLink);
+      mailtoLink.click();
+      document.body.removeChild(mailtoLink);
       
-      // Navigate to dashboard after a brief delay to ensure the mail client pops up first
+      // Navigate to dashboard after a delay to ensure the mail client pops up first
       setTimeout(() => {
         navigate(`/dashboard/${event.id}`);
-      }, 800);
+      }, 1500);
       return;
     }
 
