@@ -196,7 +196,30 @@ const AttendanceForm = () => {
 
           <div className="form-group">
             <label>Rank</label>
-            <input required type="text" name="rank" className="form-control" value={formData.rank} onChange={handleChange} />
+            <select required name="rank" className="form-control" value={formData.rank} onChange={handleChange}>
+              <option value="" disabled>Select Rank</option>
+              <option value="Captain">Captain</option>
+              <option value="FOO">FOO</option>
+              <option value="FO">FO</option>
+              <option value="Senior Executive">Senior Executive</option>
+              <option value="Executive">Executive</option>
+              <option value="Manager">Manager</option>
+              <option value="HOD">HOD</option>
+              <option value="Direktur">Direktur</option>
+              <option value="SCC">SCC</option>
+              <option value="CC">CC</option>
+              <option value="Instructor">Instructor</option>
+              <option value="Lead Auditor">Lead Auditor</option>
+              <option value="Auditor">Auditor</option>
+              <option value="Other">Other</option>
+              <option value="EFB Admin">EFB Admin</option>
+              <option value="CPO">CPO</option>
+              <option value="CPTS">CPTS</option>
+              <option value="DGCA Inspector">DGCA Inspector</option>
+              <option value="CCM">CCM</option>
+              <option value="Safety Coordinator">Safety Coordinator</option>
+              <option value="EFB Manager">EFB Manager</option>
+            </select>
           </div>
 
           <div className="form-group">
