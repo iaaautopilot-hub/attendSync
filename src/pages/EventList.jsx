@@ -13,7 +13,7 @@ const EventList = () => {
     
     // If Admin, see all. If Chairman/Instructor, technically should only see their events.
     const allEvents = await getAllEvents();
-    if (u?.role?.toLowerCase() === 'admin') {
+    if (u?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
       setEvents([...allEvents]); 
     } else {
       // Filter events where the user is one of the leaders
@@ -43,11 +43,11 @@ const EventList = () => {
             <img src="/icon.png" alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>{user?.role?.toLowerCase() === 'admin' ? 'System Events' : 'My Assigned Events'}</h2>
+            <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>{user?.multi_roles?.some(r => r.toLowerCase() === 'admin') ? 'System Events' : 'My Assigned Events'}</h2>
             <p style={{ color: 'var(--text-secondary)' }}>Manage and view attendance records for your flight or training</p>
           </div>
         </div>
-        {user?.role?.toLowerCase() === 'admin' && (
+        {user?.multi_roles?.some(r => r.toLowerCase() === 'admin') && (
           <Link to="/" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
             + New Event
           </Link>
@@ -108,7 +108,7 @@ const EventList = () => {
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                  {user?.role?.toLowerCase() === 'admin' && (
+                  {user?.multi_roles?.some(r => r.toLowerCase() === 'admin') && (
                     <button 
                       onClick={(e) => handleDelete(event.id, e)} 
                       className="btn btn-outline" 

@@ -65,6 +65,11 @@ function AppNavigation() {
       </Link>
       {user && (
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          {user.multi_roles?.some(r => r.toLowerCase() === 'admin') && (
+            <Link to="/" className="btn btn-primary" style={{ padding: '0.6rem 1.2rem', background: 'var(--aa-red)', color: 'white', border: 'none' }}>
+              + Create Event
+            </Link>
+          )}
           <Link to="/events" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
             All Events
           </Link>
