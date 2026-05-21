@@ -14,7 +14,7 @@ const UserManagement = () => {
     username: '',
     email: '',
     password: '123',
-    role: 'Chairman',
+    multi_roles: ['Chairman'],
     loaNo: '',
     staffId: ''
   };
@@ -30,7 +30,7 @@ const UserManagement = () => {
     const init = async () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
-      if (u?.role?.toLowerCase() === 'admin') {
+      if (u?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
         await loadUsers();
       }
       setLoading(false);
@@ -40,7 +40,7 @@ const UserManagement = () => {
 
   if (loading) return null;
 
-  if (currentUser?.role?.toLowerCase() !== 'admin') {
+  if (!currentUser?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
     return <Navigate to="/" replace />;
   }
 
@@ -50,6 +50,10 @@ const UserManagement = () => {
 
   const handleSubmitUser = async (e) => {
     e.preventDefault();
+    if (!formData.multi_roles || formData.multi_roles.length === 0) {
+      alert("Please select at least one role.");
+      return;
+    }
     let result;
     if (editingUserId) {
       result = await updateUser({ ...formData, original_staff_id: editingUserId });
@@ -74,7 +78,7 @@ const UserManagement = () => {
       username: user.username,
       email: user.email || '',
       password: '••••••••', // Placeholder to prevent hashing the hash
-      role: user.role,
+      multi_roles: user.multi_roles || [user.role],
       loaNo: user.loa_no || '',
       original_staff_id: user.staff_id
     });
@@ -138,13 +142,29 @@ const UserManagement = () => {
             <input required type="email" name="email" className="form-control" value={formData.email} onChange={handleChange} placeholder="david@airasia.com" />
           </div>
 
-          <div className="form-group">
-            <label>Role</label>
-            <select name="role" className="form-control" value={formData.role} onChange={handleChange}>
-              <option value="Chairman">Chairman</option>
-              <option value="Instructor">Instructor</option>
-              <option value="Admin">Admin</option>
-            </select>
+          <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+            <label>Roles</label>
+            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
+              {['Chairman', 'Instructor', 'Admin'].map(r => (
+                <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 500 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={formData.multi_roles?.includes(r)}
+                    onChange={(e) => {
+                      const currentRoles = formData.multi_roles || [];
+                      if (e.target.checked) {
+                        setFormData({ ...formData, multi_roles: [...currentRoles, r] });
+                      } else {
+                        setFormData({ ...formData, multi_roles: currentRoles.filter(role => role !== r) });
+                      }
+                    }}
+                    style={{ width: '18px', height: '18px', accentColor: 'var(--aa-red)' }}
+                  />
+                  {r}
+                </label>
+              ))}
+            </div>
+            {(!formData.multi_roles || formData.multi_roles.length === 0) && <span style={{ color: 'var(--aa-red)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>Please select at least one role.</span>}
           </div>
 
           <div className="form-group">
@@ -192,11 +212,13 @@ const UserManagement = () => {
               transition: 'all 0.3s ease'
             }} className="user-row-hover">
               <div>
-                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.25rem' }}>
+                <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   {user.name}
-                  <span className={`badge ${user.role?.toLowerCase() === 'admin' ? 'badge-purple' : 'badge-blue'}`} style={{ fontSize: '0.6rem', padding: '0.25rem 0.6rem' }}>
-                    {user.role}
-                  </span>
+                  {user.multi_roles?.map(r => (
+                    <span key={r} className={`badge ${r.toLowerCase() === 'admin' ? 'badge-purple' : 'badge-blue'}`} style={{ fontSize: '0.6rem', padding: '0.25rem 0.6rem' }}>
+                      {r}
+                    </span>
+                  ))}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                    <span style={{ color: 'var(--aa-red)', opacity: 0.8 }}>@</span>{user.username} • {user.email || 'No Email'}

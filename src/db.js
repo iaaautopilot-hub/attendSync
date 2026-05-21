@@ -32,20 +32,25 @@ export const getAllUsers = async () => {
   }
   
   // Flatten and map for easier app usage
-  return data.map(u => ({
-    ...u,
-    name: u.full_name,
-    role: u.roles?.role_name 
+  return data.map(u => {
+    const legacyRole = u.roles?.role_name 
       ? u.roles.role_name.charAt(0).toUpperCase() + u.roles.role_name.slice(1) 
-      : (ROLE_ID_MAP[u.role_id] || 'Chairman'),
-    rank: u.rank?.rank_name || '',
-    hub: u.hub?.hub_name || ''
-  }));
+      : (ROLE_ID_MAP[u.role_id] || 'Chairman');
+    
+    return {
+      ...u,
+      name: u.full_name,
+      multi_roles: u.multi_roles && u.multi_roles.length > 0 ? u.multi_roles : [legacyRole],
+      role: (u.multi_roles && u.multi_roles.length > 0) ? u.multi_roles[0] : legacyRole,
+      rank: u.rank?.rank_name || '',
+      hub: u.hub?.hub_name || ''
+    };
+  });
 };
 
 export const getUsersByRole = async (roleName) => {
   const all = await getAllUsers();
-  return all.filter(u => u.role?.toLowerCase() === roleName?.toLowerCase());
+  return all.filter(u => u.multi_roles?.some(r => r.toLowerCase() === roleName?.toLowerCase()));
 };
 
 export const validateLogin = async (username, password) => {
@@ -86,11 +91,17 @@ export const validateLogin = async (username, password) => {
   }
 
   console.log('Login successful for:', user.full_name);
-  return { ...user, name: user.full_name, role: user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin' };
+  const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
+  return { 
+    ...user, 
+    name: user.full_name, 
+    multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
+    role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole
+  };
 };
 
-export const loginUser = (username, role) => {
-  const user = { username, role, token: Date.now().toString() };
+export const loginUser = (username, multi_roles) => {
+  const user = { username, multi_roles, token: Date.now().toString() };
   localStorage.setItem(AUTH_KEY, JSON.stringify(user));
   return user;
 };
@@ -111,12 +122,23 @@ export const getCurrentUser = async () => {
     
   const user = data && data.length > 0 ? data[0] : null;
   if (error || !user) return session;
-  return { ...user, name: user.full_name, staff_id: user.staff_id, role: user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin', token: session.token };
+  
+  const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
+  
+  return { 
+    ...user, 
+    name: user.full_name, 
+    staff_id: user.staff_id, 
+    multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
+    role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole, 
+    token: session.token 
+  };
 };
 
 
 export const addUser = async (userData) => {
-  const roleId = getRoleId(userData.role);
+  const rolesArr = userData.multi_roles || [userData.role];
+  const roleId = getRoleId(rolesArr[0]);
   
   // Hash password before saving
   const salt = bcrypt.genSaltSync(10);
@@ -130,6 +152,7 @@ export const addUser = async (userData) => {
       username: userData.username,
       password: hashedPassword,
       role_id: roleId,
+      multi_roles: rolesArr,
       email: userData.email,
       loa_no: userData.loaNo
     }])
@@ -144,11 +167,12 @@ export const addUser = async (userData) => {
 };
 
 export const updateUser = async (userData) => {
-  const roleId = getRoleId(userData.role);
+  const rolesArr = userData.multi_roles || [userData.role];
+  const roleId = getRoleId(rolesArr[0]);
 
   if (!roleId) {
-    console.error('Role not found for:', userData.role);
-    return { error: { message: `Role "${userData.role}" not found in database.` } };
+    console.error('Role not found for:', rolesArr);
+    return { error: { message: `Role "${rolesArr.join(', ')}" not found in database.` } };
   }
 
   // 2. Perform the update
@@ -161,6 +185,7 @@ export const updateUser = async (userData) => {
       // Only update password if explicitly provided and not empty
       ...(userData.password && userData.password !== '••••••••' ? { password: bcrypt.hashSync(userData.password, bcrypt.genSaltSync(10)) } : {}),
       role_id: roleId,
+      multi_roles: rolesArr,
       email: userData.email,
       loa_no: userData.loaNo
     })

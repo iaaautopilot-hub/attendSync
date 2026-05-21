@@ -31,7 +31,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  if (allowedRoles && !allowedRoles.some(r => r.toLowerCase() === user.role?.toLowerCase())) {
+  if (allowedRoles && !allowedRoles.some(r => user.multi_roles?.some(ur => ur.toLowerCase() === r.toLowerCase()))) {
     return <Navigate to="/" replace />;
   }
 
@@ -68,14 +68,14 @@ function AppNavigation() {
           <Link to="/events" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
             All Events
           </Link>
-          {user.role?.toLowerCase() === 'admin' && (
+          {user.multi_roles?.some(r => r.toLowerCase() === 'admin') && (
             <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
               Manage Users
             </Link>
           )}
           <div style={{ textAlign: 'right', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--aa-white)' }}>{user.username}</div>
-            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user.role}</div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user.multi_roles?.join(' • ')}</div>
           </div>
           <Link to="/change-password" title="Change Password" style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem', fontSize: '1.2rem', textDecoration: 'none' }}>
             ⚙️
