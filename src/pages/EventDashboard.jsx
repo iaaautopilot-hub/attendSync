@@ -89,6 +89,10 @@ const EventDashboard = () => {
 
   const leaderLabel = event.type === 'Training' ? 'Instructors' : 'Chairmen';
 
+  const isAssignedLeader = event?.leaders?.includes(currentUser?.name) || event?.leaders?.includes(currentUser?.full_name);
+  const isSystemAdmin = currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
+  const canActivate = isSystemAdmin || isAssignedLeader;
+
   return (
     <div className="animate-fade-in">
       <div className="grid grid-cols-2">
@@ -122,32 +126,42 @@ const EventDashboard = () => {
 
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           {!event.isActive ? (
-            <>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Activation Required</h3>
-              <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--aa-green)', marginBottom: '0.5rem' }}>
-                  <ShieldCheck size={24} />
-                  <strong style={{ fontSize: '1.1rem' }}>Chairperson Digital Verification</strong>
+            canActivate ? (
+              <>
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Activation Required</h3>
+                <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.5rem', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--aa-green)', marginBottom: '0.5rem' }}>
+                    <ShieldCheck size={24} />
+                    <strong style={{ fontSize: '1.1rem' }}>Chairperson Digital Verification</strong>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                    A unique, encrypted QR verification code will be generated as your official digital signature for this report.
+                  </p>
                 </div>
-                <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                  A unique, encrypted QR verification code will be generated as your official digital signature for this report.
+  
+                <div style={{ width: '100%', marginBottom: '1.5rem', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
+                  <textarea 
+                    className="form-control" 
+                    style={{ minHeight: '100px', resize: 'none' }} 
+                    placeholder="Enter any official remarks, observations, or conclusions here..."
+                    value={remarks}
+                    onChange={(e) => setRemarks(e.target.value)}
+                  ></textarea>
+                </div>
+                <button onClick={handleActivate} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
+                  Verify & Activate Event
+                </button>
+              </>
+            ) : (
+              <div className="empty-state" style={{ padding: '3rem 1.5rem' }}>
+                <ShieldCheck size={48} style={{ color: 'var(--text-secondary)', marginBottom: '1rem', opacity: 0.5 }} />
+                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Pending Activation</h3>
+                <p style={{ color: 'var(--text-secondary)' }}>
+                  This event is waiting for the assigned {leaderLabel.toLowerCase()} to digitally verify and activate it.
                 </p>
               </div>
-
-              <div style={{ width: '100%', marginBottom: '1.5rem', textAlign: 'left' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
-                <textarea 
-                  className="form-control" 
-                  style={{ minHeight: '100px', resize: 'none' }} 
-                  placeholder="Enter any official remarks, observations, or conclusions here..."
-                  value={remarks}
-                  onChange={(e) => setRemarks(e.target.value)}
-                ></textarea>
-              </div>
-              <button onClick={handleActivate} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
-                Verify & Activate Event
-              </button>
-            </>
+            )
           ) : (
             <>
               <div style={{ padding: '1.5rem', background: 'rgba(226, 22, 41, 0.1)', borderRadius: '50%', color: 'var(--aa-red)', marginBottom: '1.5rem' }}>

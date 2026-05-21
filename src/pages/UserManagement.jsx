@@ -30,7 +30,7 @@ const UserManagement = () => {
     const init = async () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
-      if (u?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
+      if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
         await loadUsers();
       }
       setLoading(false);
@@ -40,7 +40,7 @@ const UserManagement = () => {
 
   if (loading) return null;
 
-  if (!currentUser?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
+  if (!currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
     return <Navigate to="/" replace />;
   }
 
@@ -144,8 +144,8 @@ const UserManagement = () => {
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
             <label>Roles</label>
-            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem' }}>
-              {['Chairman', 'Instructor', 'Admin'].map(r => (
+            <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              {['Chairman', 'Instructor', 'Admin', 'System Administrator'].map(r => (
                 <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 500 }}>
                   <input 
                     type="checkbox" 
