@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveEvent, getUsersByRole, getAllUsers } from '../db';
+import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser } from '../db';
 import { Rocket, Users, Target } from 'lucide-react';
 
 const CreateEvent = () => {
@@ -12,9 +12,11 @@ const CreateEvent = () => {
     type: 'Meeting',
     venue: '',
     room: '',
-    department: 'Flight Operation',
+    department: '', // Will be set by useEffect
     leaders: [''] // Up to 3
   });
+  
+  const [user, setUser] = useState(null);
 
   const DEPARTMENTS = [
     "Flight Operation",
@@ -30,17 +32,27 @@ const CreateEvent = () => {
   const [availableLeaders, setAvailableLeaders] = useState([]);
 
   useEffect(() => {
-    const fetchLeaders = async () => {
+    const fetchLeadersAndUser = async () => {
       const requiredRole = formData.type === 'Training' ? 'Instructor' : 'Chairman';
       const users = await getUsersByRole(requiredRole);
       setAvailableLeaders(users);
+      
+      const u = await getCurrentUser();
+      setUser(u);
+      
+      let defaultDept = 'Flight Operation';
+      const deptRole = u?.multi_roles?.find(r => r.startsWith('dept:'));
+      if (deptRole) {
+        defaultDept = deptRole.split(':')[1];
+      }
+      
+      setFormData(prev => ({
+        ...prev,
+        department: prev.department || defaultDept,
+        leaders: ['']
+      }));
     };
-    fetchLeaders();
-
-    setFormData(prev => ({
-      ...prev,
-      leaders: ['']
-    }));
+    fetchLeadersAndUser();
   }, [formData.type]);
 
   const handleChange = (e) => {
@@ -176,6 +188,8 @@ Thank you.`;
               value={formData.department} 
               onChange={handleChange}
               required
+              disabled={user?.multi_roles?.some(r => r.startsWith('dept:'))}
+              style={{ backgroundColor: user?.multi_roles?.some(r => r.startsWith('dept:')) ? 'rgba(255,255,255,0.05)' : '' }}
             >
               {DEPARTMENTS.map(dept => (
                 <option key={dept} value={dept}>{dept}</option>
