@@ -11,12 +11,23 @@ const EventList = () => {
     const u = await getCurrentUser();
     setUser(u);
     
-    // If Admin, see all. If Chairman/Instructor, technically should only see their events.
     const allEvents = await getAllEvents();
-    if (u?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase()))) {
+    
+    if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
+      // System Administrator sees all events
       setEvents([...allEvents]); 
+    } else if (u?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
+      // Admin sees events from their specific department
+      const deptRole = u.multi_roles.find(r => r.startsWith('dept:'));
+      if (deptRole) {
+        const adminDept = deptRole.split(':')[1];
+        setEvents(allEvents.filter(e => e.department === adminDept));
+      } else {
+        // If no department is set for an admin, they see no events (or we could default to all, but restricted is safer based on requirements)
+        setEvents([]);
+      }
     } else {
-      // Filter events where the user is one of the leaders
+      // Chairmen/Instructors only see events where they are assigned leaders
       const myEvents = allEvents.filter(e => e.leaders && e.leaders.includes(u.full_name));
       setEvents(myEvents);
     }

@@ -16,8 +16,21 @@ const UserManagement = () => {
     password: '123',
     multi_roles: ['Chairman'],
     loaNo: '',
-    staffId: ''
+    staffId: '',
+    adminDepartment: 'Flight Operation'
   };
+  
+  const DEPARTMENTS = [
+    "Flight Operation",
+    "Engineering",
+    "Cabin Crew",
+    "Ground Operations",
+    "Commercial",
+    "Information, Commercial and technology",
+    "Facilities Management",
+    "Corporate Quality Assurance",
+    "Safety"
+  ];
   
   const [formData, setFormData] = useState(initialFormState);
 
@@ -54,12 +67,20 @@ const UserManagement = () => {
       alert("Please select at least one role.");
       return;
     }
+
+    let payloadRoles = [...formData.multi_roles];
+    if (payloadRoles.includes('Admin')) {
+      payloadRoles.push(`dept:${formData.adminDepartment}`);
+    }
+
+    const payload = { ...formData, multi_roles: payloadRoles };
+
     let result;
     if (editingUserId) {
-      result = await updateUser({ ...formData, original_staff_id: editingUserId });
+      result = await updateUser({ ...payload, original_staff_id: editingUserId });
       if (!result.error) setEditingUserId(null);
     } else {
-      result = await addUser(formData);
+      result = await addUser(payload);
     }
 
     if (result?.error) {
@@ -72,13 +93,23 @@ const UserManagement = () => {
 
   const handleEditUser = (user) => {
     setEditingUserId(user.staff_id); 
+    
+    let roles = user.multi_roles || [user.role];
+    let adminDept = 'Flight Operation';
+    const deptRole = roles.find(r => r.startsWith('dept:'));
+    if (deptRole) {
+      adminDept = deptRole.split(':')[1];
+      roles = roles.filter(r => r !== deptRole);
+    }
+
     setFormData({
       name: user.name,
       staffId: user.staff_id || '',
       username: user.username,
       email: user.email || '',
       password: '••••••••', // Placeholder to prevent hashing the hash
-      multi_roles: user.multi_roles || [user.role],
+      multi_roles: roles,
+      adminDepartment: adminDept,
       loaNo: user.loa_no || '',
       original_staff_id: user.staff_id
     });
@@ -167,6 +198,18 @@ const UserManagement = () => {
             {(!formData.multi_roles || formData.multi_roles.length === 0) && <span style={{ color: 'var(--aa-red)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>Please select at least one role.</span>}
           </div>
 
+          {formData.multi_roles?.includes('Admin') && (
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <label>Admin Department View Limit</label>
+              <select name="adminDepartment" className="form-control" value={formData.adminDepartment} onChange={handleChange}>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept} value={dept}>{dept}</option>
+                ))}
+              </select>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>This Admin will only see events belonging to this department.</span>
+            </div>
+          )}
+
           <div className="form-group">
             <label>Password</label>
             <input required type="text" name="password" className="form-control" value={formData.password} onChange={handleChange} />
@@ -214,11 +257,16 @@ const UserManagement = () => {
               <div>
                 <div style={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap' }}>
                   {user.name}
-                  {user.multi_roles?.map(r => (
+                  {user.multi_roles?.filter(r => !r.startsWith('dept:')).map(r => (
                     <span key={r} className={`badge ${r.toLowerCase() === 'admin' ? 'badge-purple' : 'badge-blue'}`} style={{ fontSize: '0.6rem', padding: '0.25rem 0.6rem' }}>
                       {r}
                     </span>
                   ))}
+                  {user.multi_roles?.find(r => r.startsWith('dept:')) && (
+                    <span className="badge badge-purple" style={{ fontSize: '0.6rem', padding: '0.25rem 0.6rem', background: 'rgba(255,255,255,0.05)', color: 'var(--text-secondary)' }}>
+                      Dept: {user.multi_roles.find(r => r.startsWith('dept:')).split(':')[1]}
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                    <span style={{ color: 'var(--aa-red)', opacity: 0.8 }}>@</span>{user.username} • {user.email || 'No Email'}

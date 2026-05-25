@@ -5,12 +5,14 @@ const AUTH_KEY = 'attendance_app_user';
 
 const ROLE_MAP = {
   'admin': '08db30cb-be6d-4880-bfb8-fc5372bab3ee',
+  'system administrator': 'd1b7d519-8664-4e1b-b461-12c8b7470ea2',
   'chairman': '2ac81965-9702-4886-9105-a060a74a06aa',
   'instructor': 'dbf92d41-16b4-4b93-9a33-82148ba8ceec'
 };
 
 const ROLE_ID_MAP = {
   '08db30cb-be6d-4880-bfb8-fc5372bab3ee': 'Admin',
+  'd1b7d519-8664-4e1b-b461-12c8b7470ea2': 'System Administrator',
   '2ac81965-9702-4886-9105-a060a74a06aa': 'Chairman',
   'dbf92d41-16b4-4b93-9a33-82148ba8ceec': 'Instructor'
 };
