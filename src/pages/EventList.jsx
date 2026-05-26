@@ -1,17 +1,27 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllEvents, clearEvent, getCurrentUser } from '../db';
+import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments } from '../db';
 import { Calendar, Trash2, ChevronRight, Target } from 'lucide-react';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(null);
+  const [deptCodeMap, setDeptCodeMap] = useState({});
 
   const loadEvents = async () => {
     const u = await getCurrentUser();
     setUser(u);
     
-    const allEvents = await getAllEvents();
+    const [allEvents, depts] = await Promise.all([
+      getAllEvents(),
+      getAllDepartments()
+    ]);
+
+    const codeMap = {};
+    depts.forEach(d => {
+      codeMap[d.name] = d.code;
+    });
+    setDeptCodeMap(codeMap);
     
     if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
       // System Administrator sees all events
@@ -95,17 +105,10 @@ const EventList = () => {
                     <span style={{ fontSize: '0.65rem', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.6rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.05em' }}>
                       { (() => {
                         const dept = (event.department || 'Flight Operation');
-                        let dCode = 'FOP';
-                        if (dept === 'Engineering') dCode = 'ENG';
-                        else if (dept === 'Cabin Crew') dCode = 'CC';
-                        else if (dept === 'Ground Operations') dCode = 'GND';
-                        else if (dept === 'Commercial') dCode = 'COMM';
-                        else if (dept.includes('technology') || dept === 'ICT') dCode = 'ICT';
-                        else if (dept === 'Facilities Management & OHS' || dept === 'Facilities Management') dCode = 'FM';
-                        else if (dept === 'Corporate Quality Assurance') dCode = 'CQA';
-                        else if (dept === 'Safety') dCode = 'SAF';
-                        else if (dept !== 'Flight Operation' && dept !== 'FOP') {
-                          dCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
+                        let dCode = deptCodeMap[dept];
+                        if (!dCode) {
+                          if (dept === 'Flight Operation' || dept === 'FOP') dCode = 'FOP';
+                          else dCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
                         }
                         const nId = (event.event_code || '0').replace(/\D/g, '').padStart(5, '0');
                         return `IAA/${dCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date(event.date).getFullYear()}/${nId}`;

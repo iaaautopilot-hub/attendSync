@@ -8,6 +8,7 @@ import EventDashboard from './pages/EventDashboard';
 import QRDisplay from './pages/QRDisplay';
 import AttendanceForm from './pages/AttendanceForm';
 import UserManagement from './pages/UserManagement';
+import ManageDepartments from './pages/ManageDepartments';
 import ChangePassword from './pages/ChangePassword';
 import Login from './pages/Login';
 
@@ -74,9 +75,14 @@ function AppNavigation() {
             All Events
           </Link>
           {user.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
-            <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
-              Manage Users
-            </Link>
+            <>
+              <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
+                Manage Users
+              </Link>
+              <Link to="/departments" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
+                Departments
+              </Link>
+            </>
           )}
           <div style={{ textAlign: 'right', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--aa-white)' }}>{user.username}</div>
@@ -116,6 +122,11 @@ function App() {
             <Route path="/users" element={
               <ProtectedRoute allowedRoles={['System Administrator']}>
                 <UserManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/departments" element={
+              <ProtectedRoute allowedRoles={['System Administrator']}>
+                <ManageDepartments />
               </ProtectedRoute>
             } />
             <Route path="/events" element={

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { getAllUsers, addUser, deleteUser, updateUser, getCurrentUser } from '../db';
+import { getAllUsers, addUser, deleteUser, updateUser, getCurrentUser, getAllDepartments } from '../db';
 import { UserPlus, Shield, Trash2, Users, Edit } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
@@ -20,23 +20,19 @@ const UserManagement = () => {
     adminDepartment: 'Flight Operation'
   };
   
-  const DEPARTMENTS = [
-    "Flight Operation",
-    "Engineering",
-    "Cabin Crew",
-    "Ground Operations",
-    "Commercial",
-    "Information, Commercial and technology",
-    "Facilities Management & OHS",
-    "Corporate Quality Assurance",
-    "Safety"
-  ];
+  const [departments, setDepartments] = useState([]);
   
   const [formData, setFormData] = useState(initialFormState);
 
-  const loadUsers = async () => {
-    const all = await getAllUsers();
-    setUsers(all);
+  const loadData = async () => {
+    setLoading(true);
+    const [fetchedUsers, fetchedDepts] = await Promise.all([
+      getAllUsers(),
+      getAllDepartments()
+    ]);
+    setUsers(fetchedUsers);
+    setDepartments(fetchedDepts);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -44,9 +40,10 @@ const UserManagement = () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
       if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
-        await loadUsers();
+        await loadData();
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     };
     init();
   }, []);
@@ -87,7 +84,7 @@ const UserManagement = () => {
       alert("Error: " + result.error.message);
     } else {
       setFormData(initialFormState);
-      await loadUsers();
+      await loadData();
     }
   };
 
@@ -133,7 +130,7 @@ const UserManagement = () => {
       if (error) {
         alert("Error deleting user: " + error.message);
       } else {
-        await loadUsers();
+        await loadData();
       }
     }
   };
@@ -202,8 +199,8 @@ const UserManagement = () => {
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
               <label>Admin Department View Limit</label>
               <select name="adminDepartment" className="form-control" value={formData.adminDepartment} onChange={handleChange}>
-                {DEPARTMENTS.map(dept => (
-                  <option key={dept} value={dept}>{dept}</option>
+                {departments.map(dept => (
+                  <option key={dept.id} value={dept.name}>{dept.name}</option>
                 ))}
               </select>
               <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>This Admin will only see events belonging to this department.</span>

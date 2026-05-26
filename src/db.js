@@ -212,6 +212,45 @@ export const deleteUser = async (staffId) => {
   return await supabase.from('users').delete().eq('staff_id', staffId);
 };
 
+export const getAllDepartments = async () => {
+  const { data, error } = await supabase
+    .from('departments')
+    .select('*')
+    .order('name');
+  if (error) {
+    console.error('Error fetching departments:', error);
+    return [];
+  }
+  return data;
+};
+
+export const addDepartment = async (department) => {
+  const { data, error } = await supabase
+    .from('departments')
+    .insert([department])
+    .select();
+  if (error) throw error;
+  return data[0];
+};
+
+export const updateDepartment = async (id, updates) => {
+  const { data, error } = await supabase
+    .from('departments')
+    .update(updates)
+    .eq('id', id)
+    .select();
+  if (error) throw error;
+  return data[0];
+};
+
+export const deleteDepartment = async (id) => {
+  const { error } = await supabase
+    .from('departments')
+    .delete()
+    .eq('id', id);
+  if (error) throw error;
+};
+
 export const updateUserPassword = async (username, newPassword) => {
   const salt = bcrypt.genSaltSync(10);
   const hash = bcrypt.hashSync(newPassword, salt);

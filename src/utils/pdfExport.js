@@ -1,16 +1,29 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
+import { getAllDepartments } from '../db';
 
 export const exportAttendancePDF = async (event, participants, admin) => {
+  const depts = await getAllDepartments();
+  const codeMap = {};
+  depts.forEach(d => {
+    codeMap[d.name] = d.code;
+  });
+
+  const dept = (event.department || 'Flight Operation');
+  let deptCode = codeMap[dept];
+  if (!deptCode) {
+    if (dept === 'Flight Operation' || dept === 'FOP') deptCode = 'FOP';
+    else deptCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
+  }
+
   const doc = new jsPDF('p', 'mm', 'a4');
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 10;
+  const margin = 14;
   const contentWidth = pageWidth - (margin * 2);
 
-  // Helper to draw a border box
-  const drawBox = (x, y, w, h) => {
+  const drawBorder = (x, y, w, h) => {
     doc.setDrawColor(0);
     doc.setLineWidth(0.3);
     doc.rect(x, y, w, h);
@@ -20,51 +33,31 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     // --- TOP ROW ---
     const headerTop = margin;
     const headerHeight = 25;
-
-    // Logo Box
-    drawBox(margin, headerTop, 40, headerHeight);
+    drawBorder(margin, headerTop, 35, headerHeight);
+    
     try {
-      // Adjusted to be square and larger as requested (approx 22x22mm)
-      doc.addImage('/icon.png', 'PNG', margin + 9, headerTop + 1.5, 22, 22);
-    } catch (e) {
-      // Fallback to text if logo fails to load
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(226, 22, 41);
-      doc.text('AirAsia', margin + 20, headerTop + 14, { align: 'center' });
+      const iconUrl = `${window.location.origin}/icon.png`;
+      doc.addImage(iconUrl, 'PNG', margin + 3, headerTop + 3, 29, 19);
+    } catch(e) {
+      console.warn("Could not load icon", e);
     }
 
-    // Title Box
-    drawBox(margin + 40, headerTop, 90, headerHeight);
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(0);
-    doc.text('Attendance List', margin + 40 + 45, headerTop + 15, { align: 'center' });
+    drawBorder(margin + 35, headerTop, pageWidth - 2 * margin - 35, headerHeight);
+    
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    doc.text('ATTENDANCE LIST', margin + 85, headerTop + 14);
 
-    // Info Box
-    drawBox(margin + 130, headerTop, 60, headerHeight);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
-
-    // Extract numeric ID from EV-xxxx or similar and pad to 5 digits
-    const rawId = event.event_code || '000';
+    // --- SECOND ROW (Rec No, Rev, Date, Page) ---
+    const row2Top = headerTop + headerHeight;
+    const row2Height = 12;
+    drawBorder(margin, row2Top, pageWidth - 2 * margin, row2Height);
+    
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    
+    const rawId = (event.event_code || event.id || '0').toString();
     const numericId = rawId.replace(/\D/g, '').padStart(5, '0');
-
-    // Determine Department Code dynamically based on official mapping
-    const dept = (event.department || 'Flight Operation');
-    let deptCode = 'FOP';
-    if (dept === 'Engineering') deptCode = 'ENG';
-    else if (dept === 'Cabin Crew') deptCode = 'CC';
-    else if (dept === 'Ground Operations') deptCode = 'GND';
-    else if (dept === 'Commercial') deptCode = 'COMM';
-    else if (dept.includes('technology') || dept === 'ICT') deptCode = 'ICT';
-    else if (dept === 'Facilities Management & OHS' || dept === 'Facilities Management') deptCode = 'FM';
-    else if (dept === 'Corporate Quality Assurance') deptCode = 'CQA';
-    else if (dept === 'Safety') deptCode = 'SAF';
-    else if (dept !== 'Flight Operation' && dept !== 'FOP') {
-      // Fallback for any others
-      deptCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
-    }
 
     doc.text(`Rec. No.    :   IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date().getFullYear()}/${numericId}`, margin + 132, headerTop + 6);
     doc.text(`Date          :   ${event.date}`, margin + 132, headerTop + 12);

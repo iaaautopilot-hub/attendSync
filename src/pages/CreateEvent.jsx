@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser } from '../db';
+import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser, getAllDepartments } from '../db';
 import { Rocket, Users, Target } from 'lucide-react';
 
 const CreateEvent = () => {
@@ -17,18 +17,7 @@ const CreateEvent = () => {
   });
   
   const [user, setUser] = useState(null);
-
-  const DEPARTMENTS = [
-    "Flight Operation",
-    "Engineering",
-    "Cabin Crew",
-    "Ground Operations",
-    "Commercial",
-    "Information, Commercial and technology",
-    "Facilities Management & OHS",
-    "Corporate Quality Assurance",
-    "Safety"
-  ];
+  const [departments, setDepartments] = useState([]);
   const [availableLeaders, setAvailableLeaders] = useState([]);
 
   useEffect(() => {
@@ -40,7 +29,10 @@ const CreateEvent = () => {
       const u = await getCurrentUser();
       setUser(u);
       
-      let defaultDept = 'Flight Operation';
+      const depts = await getAllDepartments();
+      setDepartments(depts);
+      
+      let defaultDept = depts.length > 0 ? depts[0].name : 'Flight Operation';
       const deptRole = u?.multi_roles?.find(r => r.startsWith('dept:'));
       if (deptRole) {
         defaultDept = deptRole.split(':')[1];
@@ -191,8 +183,8 @@ Thank you.`;
               disabled={user?.multi_roles?.some(r => r.startsWith('dept:'))}
               style={{ backgroundColor: user?.multi_roles?.some(r => r.startsWith('dept:')) ? 'rgba(255,255,255,0.05)' : '' }}
             >
-              {DEPARTMENTS.map(dept => (
-                <option key={dept} value={dept}>{dept}</option>
+              {departments.map(dept => (
+                <option key={dept.id} value={dept.name}>{dept.name}</option>
               ))}
             </select>
           </div>
