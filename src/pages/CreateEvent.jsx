@@ -25,7 +25,7 @@ const CreateEvent = () => {
     "Ground Operations",
     "Commercial",
     "Information, Commercial and technology",
-    "Facilities Management",
+    "Facilities Management & OHS",
     "Corporate Quality Assurance",
     "Safety"
   ];

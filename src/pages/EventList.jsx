@@ -101,7 +101,7 @@ const EventList = () => {
                         else if (dept === 'Ground Operations') dCode = 'GND';
                         else if (dept === 'Commercial') dCode = 'COMM';
                         else if (dept.includes('technology') || dept === 'ICT') dCode = 'ICT';
-                        else if (dept === 'Facilities Management') dCode = 'FM';
+                        else if (dept === 'Facilities Management & OHS' || dept === 'Facilities Management') dCode = 'FM';
                         else if (dept === 'Corporate Quality Assurance') dCode = 'CQA';
                         else if (dept === 'Safety') dCode = 'SAF';
                         else if (dept !== 'Flight Operation' && dept !== 'FOP') {

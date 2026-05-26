@@ -58,7 +58,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     else if (dept === 'Ground Operations') deptCode = 'GND';
     else if (dept === 'Commercial') deptCode = 'COMM';
     else if (dept.includes('technology') || dept === 'ICT') deptCode = 'ICT';
-    else if (dept === 'Facilities Management') deptCode = 'FM';
+    else if (dept === 'Facilities Management & OHS' || dept === 'Facilities Management') deptCode = 'FM';
     else if (dept === 'Corporate Quality Assurance') deptCode = 'CQA';
     else if (dept === 'Safety') deptCode = 'SAF';
     else if (dept !== 'Flight Operation' && dept !== 'FOP') {
