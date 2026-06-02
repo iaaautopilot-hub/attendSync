@@ -296,6 +296,7 @@ export const saveEvent = async (eventData) => {
       venue: eventData.venue,
       room: eventData.room,
       department: eventData.department,
+      created_by: eventData.created_by,
       is_active: false
     }])
     .select()
@@ -335,7 +336,7 @@ export const getEvent = async (id) => {
 
   const { data, error } = await supabase
     .from('events')
-    .select('*, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no))')
+    .select('*, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no)), users!events_created_by_fkey(full_name, staff_id)')
     .eq('id', id)
     .single();
 
@@ -349,6 +350,7 @@ export const getEvent = async (id) => {
     isActive: data.is_active && (!data.activated_at || (new Date() - new Date(data.activated_at)) < 8 * 3600 * 1000),
     isExpired: data.activated_at && (new Date() - new Date(data.activated_at)) >= 8 * 3600 * 1000,
     type: data.event_type,
+    creator: data.users ? { name: data.users.full_name, staff_id: data.users.staff_id } : null,
     leaders: data.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || [],
     leaderDetails: data.event_assignments?.map(a => ({
       name: a.users?.full_name,

@@ -41,7 +41,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     drawBox(doc, margin, headerTop, 35, headerHeight);
     try {
       const iconUrl = `${window.location.origin}/icon.png`;
-      doc.addImage(iconUrl, 'PNG', margin + 2.5, headerTop + 6.5, 30, 12);
+      doc.addImage(iconUrl, 'PNG', margin + 7, headerTop + 2, 21, 21);
     } catch(e) {}
 
     // 2. Title Box

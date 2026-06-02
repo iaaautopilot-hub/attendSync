@@ -75,7 +75,8 @@ const CreateEvent = () => {
     const actualLeaders = formData.leaders.filter(l => l.trim() !== '');
     const event = await saveEvent({
       ...formData,
-      leaders: actualLeaders
+      leaders: actualLeaders,
+      created_by: user?.staff_id
     });
 
     // Simulate Email Notification to the first Chairman/Instructor
