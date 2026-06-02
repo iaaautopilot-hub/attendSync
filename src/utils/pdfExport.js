@@ -29,40 +29,38 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   const contentWidth = pageWidth - (margin * 2);
 
 
+  const splitSubject = doc.splitTextToSize(event.name.toUpperCase(), 73);
+  const subjectRowHeight = splitSubject.length > 1 ? splitSubject.length * 4 + 2 : 6;
+  const tableStartY = margin + 25 + 2 + 6 + subjectRowHeight + 12 + 2;
+
   const drawHeaderGrid = (pageNum, totalPagesPlaceholder) => {
-    // --- TOP ROW ---
     const headerTop = margin;
     const headerHeight = 25;
-    drawBox(doc, margin, headerTop, 35, headerHeight);
     
+    // 1. Logo Box
+    drawBox(doc, margin, headerTop, 35, headerHeight);
     try {
       const iconUrl = `${window.location.origin}/icon.png`;
       doc.addImage(iconUrl, 'PNG', margin + 3, headerTop + 3, 29, 19);
-    } catch(e) {
-      console.warn("Could not load icon", e);
-    }
+    } catch(e) {}
 
-    drawBox(doc, margin + 35, headerTop, pageWidth - 2 * margin - 35, headerHeight);
-    
+    // 2. Title Box
+    drawBox(doc, margin + 35, headerTop, 95, headerHeight);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text('ATTENDANCE LIST', margin + 85, headerTop + 14);
+    doc.text('ATTENDANCE LIST', margin + 35 + (95 / 2), headerTop + 14, { align: 'center' });
 
-    // --- SECOND ROW (Rec No, Rev, Date, Page) ---
-    const row2Top = headerTop + headerHeight;
-    const row2Height = 12;
-    drawBox(doc, margin, row2Top, pageWidth - 2 * margin, row2Height);
-    
+    // 3. Doc Control Box
+    drawBox(doc, margin + 130, headerTop, 52, headerHeight);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
+    doc.setFontSize(7.5);
     
     const rawId = (event.event_code || event.id || '0').toString();
     const numericId = rawId.replace(/\D/g, '').padStart(5, '0');
 
-    doc.text(`Rec. No.    :   IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date().getFullYear()}/${numericId}`, margin + 132, headerTop + 6);
-    doc.text(`Date          :   ${event.date}`, margin + 132, headerTop + 12);
-    // Use placeholder for total pages to be replaced later
-    doc.text(`Page         :   ${pageNum} of ${totalPagesPlaceholder}`, margin + 132, headerTop + 18);
+    doc.text(`Rec. No. : IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date().getFullYear()}/${numericId}`, margin + 131, headerTop + 7);
+    doc.text(`Date       : ${event.date}`, margin + 131, headerTop + 14);
+    doc.text(`Page       : ${pageNum} of ${totalPagesPlaceholder}`, margin + 131, headerTop + 21);
 
     // --- INFO GRID ---
     let currentY = headerTop + headerHeight + 2;
@@ -71,25 +69,23 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     // Type Checkboxes
     drawBox(doc, margin, currentY, contentWidth, gridHeight);
     doc.setFont('helvetica', 'bold');
-    doc.text(`MEETING: ${event.type === 'Meeting' ? '[v]' : '[ ]'}`, margin + 50, currentY + 4, { align: 'center' });
-    doc.text(`TRAINING: ${event.type === 'Training' ? '[v]' : '[ ]'}`, margin + 140, currentY + 4, { align: 'center' });
-
+    doc.text(`MEETING: ${event.type === 'Meeting' ? '[v]' : '[ ]'}`, margin + 45, currentY + 4, { align: 'center' });
+    doc.text(`TRAINING: ${event.type === 'Training' ? '[v]' : '[ ]'}`, margin + 135, currentY + 4, { align: 'center' });
     currentY += gridHeight;
 
     // Subject | Date
-    drawBox(doc, margin, currentY, 100, gridHeight);
+    drawBox(doc, margin, currentY, 100, subjectRowHeight);
     doc.setFontSize(7);
     doc.text('SUBJECT', margin + 1, currentY + 4);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.name.toUpperCase(), margin + 25, currentY + 4);
+    doc.text(splitSubject, margin + 25, currentY + 4);
 
-    drawBox(doc, margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 82, subjectRowHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('DATE', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.date, margin + 125, currentY + 4);
-
-    currentY += gridHeight;
+    currentY += subjectRowHeight;
 
     // Dept | Venue
     drawBox(doc, margin, currentY, 100, gridHeight);
@@ -98,12 +94,11 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setFont('helvetica', 'normal');
     doc.text(event.department?.toUpperCase() || '', margin + 25, currentY + 4);
 
-    drawBox(doc, margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 82, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('VENUE', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.venue?.toUpperCase() || '', margin + 125, currentY + 4);
-
     currentY += gridHeight;
 
     // Type | Room
@@ -113,19 +108,17 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setFont('helvetica', 'normal');
     doc.text(event.type?.toUpperCase() || '', margin + 25, currentY + 4);
 
-    drawBox(doc, margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 82, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('ROOM', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.room?.toUpperCase() || '', margin + 125, currentY + 4);
-
-    return currentY + gridHeight + 2;
   };
 
   // Main table generation
   autoTable(doc, {
-    startY: 65, // Increased from 60 to add spacing after header
-    margin: { top: 65, left: margin, right: margin, bottom: 40 },
+    startY: tableStartY, // Use calculated startY
+    margin: { top: tableStartY, left: margin, right: margin, bottom: 40 },
     head: [['NO', 'NAME', 'ID NO.', 'RANK', 'LICENSE / FAC NO.', 'HUB', 'SIGNATURE']],
     body: participants.map((p, i) => [
       i + 1,
@@ -277,9 +270,9 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setPage(i);
     // Re-draw the page number part specifically
     doc.setFillColor(255, 255, 255);
-    doc.rect(margin + 131, margin + 15, 58, 6, 'F');
+    doc.rect(margin + 130, margin + 17, 51, 6, 'F');
     doc.setTextColor(0);
-    doc.text(`Page         :   ${i} of ${totalPages}`, margin + 132, margin + 18);
+    doc.text(`Page       : ${i} of ${totalPages}`, margin + 131, margin + 21);
   }
 
   const fileName = `${event.type}_${event.name.replace(/\s+/g, '')}_${event.date}.pdf`;
