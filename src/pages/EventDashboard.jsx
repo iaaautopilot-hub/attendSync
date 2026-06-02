@@ -71,8 +71,8 @@ const EventDashboard = () => {
 
   const handleGenerateSoftCopy = async () => {
     if (participants.length === 0) return;
-    const adminToUse = event.creator || currentUser;
-    await exportAttendancePDF(event, participants, adminToUse);
+    // Pass event.creator (whoever created the event), not the logged-in user
+    await exportAttendancePDF(event, participants, event.creator);
   };
 
   if (!event) {

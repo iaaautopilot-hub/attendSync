@@ -41,7 +41,24 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     drawBox(doc, margin, headerTop, 35, headerHeight);
     try {
       const iconUrl = `${window.location.origin}/icon.png`;
-      doc.addImage(iconUrl, 'PNG', margin + 7, headerTop + 2, 21, 21);
+      const imgProps = doc.getImageProperties(iconUrl);
+      const boxW = 35;
+      const boxH = headerHeight;
+      const pad = 2;
+      const availW = boxW - pad * 2;
+      const availH = boxH - pad * 2;
+      const ratio = imgProps.width / imgProps.height;
+      let imgW, imgH;
+      if (ratio >= 1) {
+        imgW = Math.min(availW, availH * ratio);
+        imgH = imgW / ratio;
+      } else {
+        imgH = Math.min(availH, availW / ratio);
+        imgW = imgH * ratio;
+      }
+      const imgX = margin + (boxW - imgW) / 2;
+      const imgY = headerTop + (boxH - imgH) / 2;
+      doc.addImage(iconUrl, 'PNG', imgX, imgY, imgW, imgH);
     } catch(e) {}
 
     // 2. Title Box
@@ -242,15 +259,17 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   currentY += 6;
   drawBox(doc, margin, currentY, contentWidth, 20);
 
-  if (admin) {
+  // Use the event creator (whoever created the event), not the logged-in user
+  const creator = event.creator || admin;
+  if (creator) {
     doc.setFont('helvetica', 'normal');
     // Ensure both Name and Staff ID are shown in their respective columns
-    doc.text(admin.name?.toUpperCase() || admin.full_name?.toUpperCase() || '', margin + 50, currentY + 10, { align: 'center' });
-    doc.text(admin.staff_id || '', margin + 120, currentY + 10, { align: 'center' });
+    doc.text(creator.name?.toUpperCase() || creator.full_name?.toUpperCase() || '', margin + 50, currentY + 10, { align: 'center' });
+    doc.text(creator.staff_id || '', margin + 120, currentY + 10, { align: 'center' });
 
     // Generate Automated Admin QR Signature
     try {
-      const adminVerification = `ADMINISTRATOR: ${admin.name || 'N/A'} (${admin.staff_id || 'N/A'}) | REPORT: ${event.event_code || 'N/A'} | DATE: ${new Date().toLocaleDateString()} | VERIFIED BY ATTENDSYNC`;
+      const adminVerification = `ADMINISTRATOR: ${creator.name || 'N/A'} (${creator.staff_id || 'N/A'}) | REPORT: ${event.event_code || 'N/A'} | DATE: ${new Date().toLocaleDateString()} | VERIFIED BY ATTENDSYNC`;
       const adminQr = await QRCode.toDataURL(adminVerification, { margin: 1, width: 100 });
       // Admin QR square 12.5x12.5
       doc.addImage(adminQr, 'PNG', margin + 158.75, currentY + 3.75, 12.5, 12.5);
