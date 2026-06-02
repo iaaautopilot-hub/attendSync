@@ -2,6 +2,11 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { getAllDepartments } from '../db';
+const drawBox = (doc, x, y, w, h) => {
+  doc.setDrawColor(0);
+  doc.setLineWidth(0.3);
+  doc.rect(x, y, w, h);
+};
 
 export const exportAttendancePDF = async (event, participants, admin) => {
   const depts = await getAllDepartments();
@@ -23,17 +28,12 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   const margin = 14;
   const contentWidth = pageWidth - (margin * 2);
 
-  const drawBorder = (x, y, w, h) => {
-    doc.setDrawColor(0);
-    doc.setLineWidth(0.3);
-    doc.rect(x, y, w, h);
-  };
 
   const drawHeaderGrid = (pageNum, totalPagesPlaceholder) => {
     // --- TOP ROW ---
     const headerTop = margin;
     const headerHeight = 25;
-    drawBorder(margin, headerTop, 35, headerHeight);
+    drawBox(doc, margin, headerTop, 35, headerHeight);
     
     try {
       const iconUrl = `${window.location.origin}/icon.png`;
@@ -42,7 +42,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
       console.warn("Could not load icon", e);
     }
 
-    drawBorder(margin + 35, headerTop, pageWidth - 2 * margin - 35, headerHeight);
+    drawBox(doc, margin + 35, headerTop, pageWidth - 2 * margin - 35, headerHeight);
     
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
@@ -51,7 +51,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     // --- SECOND ROW (Rec No, Rev, Date, Page) ---
     const row2Top = headerTop + headerHeight;
     const row2Height = 12;
-    drawBorder(margin, row2Top, pageWidth - 2 * margin, row2Height);
+    drawBox(doc, margin, row2Top, pageWidth - 2 * margin, row2Height);
     
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -69,7 +69,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     const gridHeight = 6;
 
     // Type Checkboxes
-    drawBox(margin, currentY, contentWidth, gridHeight);
+    drawBox(doc, margin, currentY, contentWidth, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text(`MEETING: ${event.type === 'Meeting' ? '[v]' : '[ ]'}`, margin + 50, currentY + 4, { align: 'center' });
     doc.text(`TRAINING: ${event.type === 'Training' ? '[v]' : '[ ]'}`, margin + 140, currentY + 4, { align: 'center' });
@@ -77,13 +77,13 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     currentY += gridHeight;
 
     // Subject | Date
-    drawBox(margin, currentY, 100, gridHeight);
+    drawBox(doc, margin, currentY, 100, gridHeight);
     doc.setFontSize(7);
     doc.text('SUBJECT', margin + 1, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.name.toUpperCase(), margin + 25, currentY + 4);
 
-    drawBox(margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 90, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('DATE', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
@@ -92,13 +92,13 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     currentY += gridHeight;
 
     // Dept | Venue
-    drawBox(margin, currentY, 100, gridHeight);
+    drawBox(doc, margin, currentY, 100, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('DEPARTMENT', margin + 1, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.department?.toUpperCase() || '', margin + 25, currentY + 4);
 
-    drawBox(margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 90, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('VENUE', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
@@ -107,13 +107,13 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     currentY += gridHeight;
 
     // Type | Room
-    drawBox(margin, currentY, 100, gridHeight);
+    drawBox(doc, margin, currentY, 100, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('TRAINING TYPE', margin + 1, currentY + 4);
     doc.setFont('helvetica', 'normal');
     doc.text(event.type?.toUpperCase() || '', margin + 25, currentY + 4);
 
-    drawBox(margin + 100, currentY, 90, gridHeight);
+    drawBox(doc, margin + 100, currentY, 90, gridHeight);
     doc.setFont('helvetica', 'bold');
     doc.text('ROOM', margin + 101, currentY + 4);
     doc.setFont('helvetica', 'normal');
@@ -153,10 +153,10 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 50 },
+      1: { cellWidth: 46 },
       2: { cellWidth: 25, halign: 'center' },
-      3: { cellWidth: 25, halign: 'center' },
-      4: { cellWidth: 30, halign: 'center' },
+      3: { cellWidth: 23, halign: 'center' },
+      4: { cellWidth: 28, halign: 'center' },
       5: { cellWidth: 15, halign: 'center' },
       6: { cellWidth: 35, minCellHeight: 14 }
     },
@@ -200,14 +200,14 @@ export const exportAttendancePDF = async (event, participants, admin) => {
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
-  drawBox(margin, currentY, contentWidth, 6);
+  drawBox(doc, margin, currentY, contentWidth, 6);
   doc.text('CHAIRPERSON / INSTRUCTOR', margin + 30, currentY + 4, { align: 'center' });
   doc.text('ID NO.', margin + 100, currentY + 4, { align: 'center' });
   doc.text('LOA NO.', margin + 140, currentY + 4, { align: 'center' });
   doc.text('SIGNATURE', margin + 175, currentY + 4, { align: 'center' });
 
   currentY += 6;
-  drawBox(margin, currentY, contentWidth, 20);
+  drawBox(doc, margin, currentY, contentWidth, 20);
   if (event.leaderDetails && event.leaderDetails.length > 0) {
     const leader = event.leaderDetails[0];
     doc.setFont('helvetica', 'normal');
@@ -224,11 +224,11 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   }
 
   currentY += 25; // Spacing after Chairperson box
-  drawBox(margin, currentY, contentWidth, 6);
+  drawBox(doc, margin, currentY, contentWidth, 6);
   doc.text('REMARKS', pageWidth / 2, currentY + 4, { align: 'center' });
 
   currentY += 6;
-  drawBox(margin, currentY, contentWidth, 12);
+  drawBox(doc, margin, currentY, contentWidth, 12);
   if (event.remarks) {
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
@@ -241,13 +241,13 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   checkSpace(35);
 
   doc.setFont('helvetica', 'bold');
-  drawBox(margin, currentY, contentWidth, 6);
+  drawBox(doc, margin, currentY, contentWidth, 6);
   doc.text('ADMINISTRATOR\'S NAME', margin + 50, currentY + 4, { align: 'center' });
   doc.text('ID NO.', margin + 130, currentY + 4, { align: 'center' });
   doc.text('SIGNATURE', margin + 170, currentY + 4, { align: 'center' });
 
   currentY += 6;
-  drawBox(margin, currentY, contentWidth, 20);
+  drawBox(doc, margin, currentY, contentWidth, 20);
 
   if (admin) {
     doc.setFont('helvetica', 'normal');
