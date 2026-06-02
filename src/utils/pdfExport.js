@@ -41,7 +41,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     drawBox(doc, margin, headerTop, 35, headerHeight);
     try {
       const iconUrl = `${window.location.origin}/icon.png`;
-      doc.addImage(iconUrl, 'PNG', margin + 3, headerTop + 3, 29, 19);
+      doc.addImage(iconUrl, 'PNG', margin + 2.5, headerTop + 6.5, 30, 12);
     } catch(e) {}
 
     // 2. Title Box
@@ -194,24 +194,24 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
   drawBox(doc, margin, currentY, contentWidth, 6);
-  doc.text('CHAIRPERSON / INSTRUCTOR', margin + 30, currentY + 4, { align: 'center' });
-  doc.text('ID NO.', margin + 100, currentY + 4, { align: 'center' });
-  doc.text('LOA NO.', margin + 140, currentY + 4, { align: 'center' });
-  doc.text('SIGNATURE', margin + 175, currentY + 4, { align: 'center' });
+  doc.text('CHAIRPERSON / INSTRUCTOR', margin + 40, currentY + 4, { align: 'center' });
+  doc.text('ID NO.', margin + 95, currentY + 4, { align: 'center' });
+  doc.text('LOA NO.', margin + 130, currentY + 4, { align: 'center' });
+  doc.text('SIGNATURE', margin + 165, currentY + 4, { align: 'center' });
 
   currentY += 6;
   drawBox(doc, margin, currentY, contentWidth, 20);
   if (event.leaderDetails && event.leaderDetails.length > 0) {
     const leader = event.leaderDetails[0];
     doc.setFont('helvetica', 'normal');
-    doc.text(leader.name?.toUpperCase() || '', margin + 30, currentY + 11, { align: 'center' });
-    doc.text(leader.staff_id || '', margin + 100, currentY + 11, { align: 'center' });
-    doc.text(leader.loa_no || '', margin + 140, currentY + 11, { align: 'center' });
+    doc.text(leader.name?.toUpperCase() || '', margin + 40, currentY + 11, { align: 'center' });
+    doc.text(leader.staff_id || '', margin + 95, currentY + 11, { align: 'center' });
+    doc.text(leader.loa_no || '', margin + 130, currentY + 11, { align: 'center' });
 
     if (event.leader_signature) {
       try {
         // Chairperson QR square 12.5x12.5
-        doc.addImage(event.leader_signature, 'PNG', margin + 162.5, currentY + 3.75, 12.5, 12.5);
+        doc.addImage(event.leader_signature, 'PNG', margin + 158.75, currentY + 3.75, 12.5, 12.5);
       } catch (e) { }
     }
   }
@@ -236,8 +236,8 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   doc.setFont('helvetica', 'bold');
   drawBox(doc, margin, currentY, contentWidth, 6);
   doc.text('ADMINISTRATOR\'S NAME', margin + 50, currentY + 4, { align: 'center' });
-  doc.text('ID NO.', margin + 130, currentY + 4, { align: 'center' });
-  doc.text('SIGNATURE', margin + 170, currentY + 4, { align: 'center' });
+  doc.text('ID NO.', margin + 120, currentY + 4, { align: 'center' });
+  doc.text('SIGNATURE', margin + 165, currentY + 4, { align: 'center' });
 
   currentY += 6;
   drawBox(doc, margin, currentY, contentWidth, 20);
@@ -246,14 +246,14 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setFont('helvetica', 'normal');
     // Ensure both Name and Staff ID are shown in their respective columns
     doc.text(admin.name?.toUpperCase() || admin.full_name?.toUpperCase() || '', margin + 50, currentY + 10, { align: 'center' });
-    doc.text(admin.staff_id || '', margin + 130, currentY + 10, { align: 'center' });
+    doc.text(admin.staff_id || '', margin + 120, currentY + 10, { align: 'center' });
 
     // Generate Automated Admin QR Signature
     try {
       const adminVerification = `ADMINISTRATOR: ${admin.name || 'N/A'} (${admin.staff_id || 'N/A'}) | REPORT: ${event.event_code || 'N/A'} | DATE: ${new Date().toLocaleDateString()} | VERIFIED BY ATTENDSYNC`;
       const adminQr = await QRCode.toDataURL(adminVerification, { margin: 1, width: 100 });
       // Admin QR square 12.5x12.5
-      doc.addImage(adminQr, 'PNG', margin + 162.5, currentY + 3.75, 12.5, 12.5);
+      doc.addImage(adminQr, 'PNG', margin + 158.75, currentY + 3.75, 12.5, 12.5);
     } catch (e) {
       console.error('Admin QR error:', e);
     }
