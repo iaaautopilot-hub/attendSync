@@ -206,7 +206,8 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     return false;
   };
 
-  checkSpace(30);
+  const leaders = (event.leaderDetails && event.leaderDetails.length > 0) ? event.leaderDetails : [{}];
+  checkSpace(6 + (20 * leaders.length) + 5);
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7);
@@ -217,9 +218,9 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   doc.text('SIGNATURE', margin + 165, currentY + 4, { align: 'center' });
 
   currentY += 6;
-  drawBox(doc, margin, currentY, contentWidth, 20);
-  if (event.leaderDetails && event.leaderDetails.length > 0) {
-    const leader = event.leaderDetails[0];
+  
+  leaders.forEach(leader => {
+    drawBox(doc, margin, currentY, contentWidth, 20);
     doc.setFont('helvetica', 'normal');
     doc.text(leader.name?.toUpperCase() || '', margin + 40, currentY + 11, { align: 'center' });
     doc.text(leader.staff_id || '', margin + 95, currentY + 11, { align: 'center' });
@@ -231,9 +232,10 @@ export const exportAttendancePDF = async (event, participants, admin) => {
         doc.addImage(event.leader_signature, 'PNG', margin + 158.75, currentY + 3.75, 12.5, 12.5);
       } catch (e) { }
     }
-  }
+    currentY += 20;
+  });
 
-  currentY += 25; // Spacing after Chairperson box
+  currentY += 5; // Spacing after Chairperson box
   drawBox(doc, margin, currentY, contentWidth, 6);
   doc.text('REMARKS', pageWidth / 2, currentY + 4, { align: 'center' });
 
