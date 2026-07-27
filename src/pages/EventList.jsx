@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments } from '../db';
-import { Calendar, Trash2, ChevronRight, Target } from 'lucide-react';
+import { Calendar, Trash2, ChevronRight, Target, Filter } from 'lucide-react';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
   const [user, setUser] = useState(null);
   const [deptCodeMap, setDeptCodeMap] = useState({});
+  const [departments, setDepartments] = useState([]);
+  const [selectedDepartment, setSelectedDepartment] = useState('ALL');
 
   const loadEvents = async () => {
     const u = await getCurrentUser();
@@ -22,6 +24,7 @@ const EventList = () => {
       codeMap[d.name] = d.code;
     });
     setDeptCodeMap(codeMap);
+    setDepartments(depts || []);
     
     if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
       // System Administrator sees all events
@@ -56,6 +59,15 @@ const EventList = () => {
     }
   };
 
+  const availableDepartments = Array.from(new Set([
+    ...departments.map(d => d.name),
+    ...events.map(e => e.department).filter(Boolean)
+  ])).sort();
+
+  const filteredEvents = selectedDepartment === 'ALL'
+    ? events
+    : events.filter(e => e.department === selectedDepartment);
+
   return (
     <div className="animate-fade-in" style={{ maxWidth: '950px', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
@@ -75,15 +87,86 @@ const EventList = () => {
         )}
       </div>
 
+      {availableDepartments.length > 0 && events.length > 0 && (
+        <div className="glass-card" style={{ padding: '1.25rem 1.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ padding: '0.6rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '12px', color: 'var(--aa-red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Filter size={20} />
+            </div>
+            <div>
+              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--aa-white)', display: 'block' }}>Department Filter</span>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Showing {filteredEvents.length} of {events.length} total events</span>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <button
+              onClick={() => setSelectedDepartment('ALL')}
+              className={`btn ${selectedDepartment === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+              style={{
+                padding: '0.45rem 1rem',
+                fontSize: '0.85rem',
+                borderRadius: '50px',
+                background: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'transparent',
+                borderColor: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'var(--border-color)',
+                color: selectedDepartment === 'ALL' ? '#fff' : 'var(--text-secondary)',
+                transition: 'all 0.2s ease',
+                fontWeight: selectedDepartment === 'ALL' ? '700' : '500',
+                boxShadow: selectedDepartment === 'ALL' ? '0 4px 12px rgba(226, 22, 41, 0.3)' : 'none'
+              }}
+            >
+              All ({events.length})
+            </button>
+            {availableDepartments.map(deptName => {
+              const count = events.filter(e => e.department === deptName).length;
+              const isSelected = selectedDepartment === deptName;
+              return (
+                <button
+                  key={deptName}
+                  onClick={() => setSelectedDepartment(deptName)}
+                  className={`btn ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                  style={{
+                    padding: '0.45rem 1rem',
+                    fontSize: '0.85rem',
+                    borderRadius: '50px',
+                    background: isSelected ? 'var(--aa-red)' : 'transparent',
+                    borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
+                    color: isSelected ? '#fff' : 'var(--text-secondary)',
+                    transition: 'all 0.2s ease',
+                    fontWeight: isSelected ? '700' : '500',
+                    boxShadow: isSelected ? '0 4px 12px rgba(226, 22, 41, 0.3)' : 'none'
+                  }}
+                >
+                  {deptName} ({count})
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid">
-        {events.length === 0 ? (
+        {filteredEvents.length === 0 ? (
           <div className="empty-state">
             <img src="/icon.png" alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '1.5rem', opacity: 0.6 }} />
             <h2>No Events Found</h2>
-            <p>You do not have any active or past events assigned to you.</p>
+            {selectedDepartment !== 'ALL' ? (
+              <>
+                <p>No events found for department <strong>{selectedDepartment}</strong>.</p>
+                <button
+                  onClick={() => setSelectedDepartment('ALL')}
+                  className="btn btn-outline"
+                  style={{ marginTop: '1rem', padding: '0.5rem 1.25rem' }}
+                >
+                  Show All Departments
+                </button>
+              </>
+            ) : (
+              <p>You do not have any active or past events assigned to you.</p>
+            )}
           </div>
         ) : (
-          events.map(event => (
+          filteredEvents.map(event => (
             <Link 
               key={event.id} 
               to={`/dashboard/${event.id}`} 
