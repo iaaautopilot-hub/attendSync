@@ -52,8 +52,8 @@ function AppNavigation() {
     fetchUser();
   }, [location]);
 
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     setUser(null);
     navigate('/login');
   };
@@ -88,10 +88,7 @@ function AppNavigation() {
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--aa-white)' }}>{user.username}</div>
             <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{user.multi_roles?.join(' • ')}</div>
           </div>
-          <Link to="/change-password" title="Change Password" style={{ color: 'var(--text-secondary)', marginLeft: '0.5rem', fontSize: '1.2rem', textDecoration: 'none' }}>
-            ⚙️
-          </Link>
-          <button onClick={handleLogout} className="btn btn-outline" style={{ padding: '0.6rem 1rem' }}>
+          <button onClick={handleLogout} className="btn btn-outline" style={{ padding: '0.6rem 1rem', marginLeft: '0.5rem' }}>
             <LogOut size={18} />
           </button>
         </div>

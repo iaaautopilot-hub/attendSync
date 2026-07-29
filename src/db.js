@@ -103,27 +103,35 @@ export const validateLogin = async (username, password) => {
 };
 
 export const loginUser = (username, multi_roles) => {
+  // Deprecated for Google SSO but kept for compatibility
   const user = { username, multi_roles, token: Date.now().toString() };
   localStorage.setItem(AUTH_KEY, JSON.stringify(user));
   return user;
 };
 
-export const logoutUser = () => {
+export const logoutUser = async () => {
+  await supabase.auth.signOut();
   localStorage.removeItem(AUTH_KEY);
 };
 
 export const getCurrentUser = async () => {
-  const storedSession = localStorage.getItem(AUTH_KEY);
-  if (!storedSession) return null;
-  const session = JSON.parse(storedSession);
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) return null;
+  
+  const email = session.user.email;
   
   const { data, error } = await supabase
     .from('users')
     .select('*, roles(role_name)')
-    .eq('username', session.username);
+    .eq('email', email);
     
   const user = data && data.length > 0 ? data[0] : null;
-  if (error || !user) return session;
+  
+  if (error || !user) {
+    console.warn("Authenticated via Google but email not found in users table:", email);
+    return null;
+  }
   
   const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
   
@@ -133,7 +141,7 @@ export const getCurrentUser = async () => {
     staff_id: user.staff_id, 
     multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
     role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole, 
-    token: session.token 
+    token: session.access_token 
   };
 };
 

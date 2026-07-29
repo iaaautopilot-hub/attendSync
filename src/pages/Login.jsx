@@ -1,38 +1,18 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { loginUser, validateLogin } from '../db';
-import { Lock, LogIn } from 'lucide-react';
+import React from 'react';
+import { supabase } from '../lib/supabase';
+import { LogIn } from 'lucide-react';
 
 const Login = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: '',
-    password: ''
-  });
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (formData.username && formData.password) {
-      const validUser = await validateLogin(formData.username, formData.password);
-
-      if (!validUser) {
-        alert('Invalid username or password!');
-        return;
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'https://attendance-list-web-app.vercel.app/'
       }
+    });
 
-      loginUser(validUser.username, validUser.role);
-
-      // Route based on role
-      if (validUser.role?.toLowerCase() === 'admin') {
-        navigate('/'); // Admin goes to Create Event
-      } else {
-        navigate('/events'); // Chairman/Instructor go to their events list
-      }
+    if (error) {
+      alert('Error logging in with Google: ' + error.message);
     }
   };
 
@@ -44,25 +24,13 @@ const Login = () => {
             <img src="/icon.png" alt="Logo" style={{ width: '36px', height: '36px', objectFit: 'contain' }} />
           </div>
           <h2 style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>Staff Portal</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Enter your credentials to access the AirAsia Attendance system.</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Sign in with your Google account to access the AirAsia Attendance system.</p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Username</label>
-            <input required type="text" name="username" className="form-control" value={formData.username} onChange={handleChange} placeholder="e.g. john.doe" />
-          </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input required type="password" name="password" className="form-control" value={formData.password} onChange={handleChange} placeholder="••••••••" />
-          </div>
-
-          <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '1.5rem', fontSize: '1.1rem', padding: '1rem' }}>
-            <LogIn size={22} />
-            Sign In Securely
-          </button>
-        </form>
+        <button onClick={handleGoogleLogin} className="btn btn-primary" style={{ width: '100%', marginTop: '1.5rem', fontSize: '1.1rem', padding: '1rem', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+          <img src="https://www.google.com/favicon.ico" alt="Google" style={{ width: '20px', height: '20px', background: 'white', borderRadius: '50%', padding: '2px' }} />
+          Sign In with Google
+        </button>
       </div>
     </div>
   );
