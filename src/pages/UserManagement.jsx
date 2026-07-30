@@ -11,7 +11,6 @@ const UserManagement = () => {
   
   const initialFormState = {
     name: '',
-    username: '',
     email: '',
     password: '123',
     multi_roles: ['Chairman'],
@@ -102,7 +101,6 @@ const UserManagement = () => {
     setFormData({
       name: user.name,
       staffId: user.staff_id || '',
-      username: user.username,
       email: user.email || '',
       password: '••••••••', // Placeholder to prevent hashing the hash
       multi_roles: roles,
@@ -158,11 +156,6 @@ const UserManagement = () => {
             <label>Staff ID</label>
             <input required type="text" name="staffId" className="form-control" value={formData.staffId} onChange={handleChange} placeholder="e.g. 1003668" />
             {editingUserId && <span style={{ fontSize: '0.65rem', color: 'var(--aa-red)', marginTop: '0.25rem', display: 'block' }}>NOTE: CHANGING STAFF ID WILL UPDATE ALL HISTORICAL LINKS.</span>}
-          </div>
-
-          <div className="form-group">
-            <label>Username</label>
-            <input required type="text" name="username" className="form-control" value={formData.username} onChange={handleChange} placeholder="e.g. david.m" />
           </div>
 
           <div className="form-group" style={{ gridColumn: '1 / -1' }}>
@@ -266,7 +259,7 @@ const UserManagement = () => {
                   )}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                   <span style={{ color: 'var(--aa-red)', opacity: 0.8 }}>@</span>{user.username} • {user.email || 'No Email'}
+                   {user.email || 'No Email'}
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>

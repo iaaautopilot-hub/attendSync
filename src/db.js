@@ -159,7 +159,7 @@ export const addUser = async (userData) => {
     .insert([{
       staff_id: userData.staffId || userData.username, 
       full_name: userData.name,
-      username: userData.username,
+      username: userData.username || userData.staffId,
       password: hashedPassword,
       role_id: roleId,
       multi_roles: rolesArr,
@@ -191,7 +191,7 @@ export const updateUser = async (userData) => {
     .update({
       staff_id: userData.staffId, // New ID
       full_name: userData.name,
-      username: userData.username,
+      username: userData.username || userData.staffId,
       // Only update password if explicitly provided and not empty
       ...(userData.password && userData.password !== '••••••••' ? { password: bcrypt.hashSync(userData.password, bcrypt.genSaltSync(10)) } : {}),
       role_id: roleId,
