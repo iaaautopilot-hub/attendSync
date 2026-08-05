@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter, Search } from 'lucide-react';
+import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
+import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users } from 'lucide-react';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -10,6 +10,9 @@ const EventList = () => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('ALL');
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [editFormData, setEditFormData] = useState(null);
+  const [availableLeaders, setAvailableLeaders] = useState([]);
 
   const loadEvents = async () => {
     const u = await getCurrentUser();
@@ -57,6 +60,56 @@ const EventList = () => {
     if (window.confirm("Are you sure you want to permanently delete this event? This will also remove all its attendance records.")) {
       await clearEvent(id);
       loadEvents();
+    }
+  };
+
+  const openEditModal = async (e, event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const requiredRole = event.type === 'Training' ? 'Instructor' : 'Chairman';
+    const users = await getUsersByRole(requiredRole);
+    setAvailableLeaders(users);
+    
+    setEditingEvent(event);
+    setEditFormData({
+      name: event.name,
+      date: event.date,
+      time: event.time,
+      type: event.type,
+      venue: event.venue,
+      room: event.room,
+      department: event.department,
+      leaders: event.leaders?.length > 0 ? [...event.leaders] : ['']
+    });
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    const actualLeaders = editFormData.leaders.filter(l => l.trim() !== '');
+    await updateEventInfo(editingEvent.id, {
+      ...editFormData,
+      leaders: actualLeaders
+    });
+    setEditingEvent(null);
+    loadEvents();
+  };
+
+  const handleLeaderChange = (index, value) => {
+    const newLeaders = [...editFormData.leaders];
+    newLeaders[index] = value;
+    setEditFormData({ ...editFormData, leaders: newLeaders });
+  };
+
+  const addLeader = () => {
+    if (editFormData.leaders.length < 3) {
+      setEditFormData({ ...editFormData, leaders: [...editFormData.leaders, ''] });
+    }
+  };
+
+  const removeLeader = (index) => {
+    if (editFormData.leaders.length > 1) {
+      const newLeaders = editFormData.leaders.filter((_, i) => i !== index);
+      setEditFormData({ ...editFormData, leaders: newLeaders });
     }
   };
 
@@ -222,14 +275,24 @@ const EventList = () => {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                   {user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
-                    <button 
-                      onClick={(e) => handleDelete(event.id, e)} 
-                      className="btn btn-outline" 
-                      style={{ padding: '0.5rem', color: '#F87171', border: 'none' }}
-                      title="Delete Event"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <>
+                      <button 
+                        onClick={(e) => openEditModal(e, event)} 
+                        className="btn btn-outline" 
+                        style={{ padding: '0.5rem', color: 'var(--text-secondary)', border: 'none' }}
+                        title="Edit Event"
+                      >
+                        <Edit size={20} />
+                      </button>
+                      <button 
+                        onClick={(e) => handleDelete(event.id, e)} 
+                        className="btn btn-outline" 
+                        style={{ padding: '0.5rem', color: '#F87171', border: 'none' }}
+                        title="Delete Event"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </>
                   )}
                   <ChevronRight size={24} style={{ color: 'var(--text-secondary)' }} />
                 </div>
@@ -238,6 +301,116 @@ const EventList = () => {
           ))
         )}
       </div>
+
+      {editingEvent && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+          display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Edit Event</h2>
+              <button onClick={() => setEditingEvent(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
+                <X size={24} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="grid grid-cols-2">
+              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                <label>Event Name</label>
+                <input required type="text" className="form-control" value={editFormData.name} onChange={(e) => setEditFormData({...editFormData, name: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Event Type</label>
+                <select className="form-control" value={editFormData.type} onChange={(e) => setEditFormData({...editFormData, type: e.target.value})} disabled>
+                  <option value="Meeting">Meeting</option>
+                  <option value="Training">Training</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Department</label>
+                <select className="form-control" value={editFormData.department} onChange={(e) => setEditFormData({...editFormData, department: e.target.value})}>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Event Date</label>
+                <input required type="date" className="form-control" value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Event Time</label>
+                <input required type="time" className="form-control" value={editFormData.time} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Venue</label>
+                <input required type="text" className="form-control" value={editFormData.venue} onChange={(e) => setEditFormData({...editFormData, venue: e.target.value})} />
+              </div>
+
+              <div className="form-group">
+                <label>Room Name</label>
+                <input required type="text" className="form-control" value={editFormData.room} onChange={(e) => setEditFormData({...editFormData, room: e.target.value})} />
+              </div>
+
+              <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', marginTop: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Users size={20} style={{ color: 'var(--aa-red)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Assign {editFormData.type === 'Training' ? 'Instructor' : 'Chairman'}</h3>
+                  </div>
+                  {editFormData.leaders.length < 3 && (
+                    <button type="button" onClick={addLeader} className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                      + Add
+                    </button>
+                  )}
+                </div>
+
+                {editFormData.leaders.map((leader, index) => (
+                  <div key={index} style={{ display: 'flex', gap: '1rem', marginBottom: index !== editFormData.leaders.length - 1 ? '1rem' : '0' }}>
+                    <div className="form-group" style={{ margin: 0, flex: 1 }}>
+                      <select
+                        required
+                        className="form-control"
+                        value={leader}
+                        onChange={(e) => handleLeaderChange(index, e.target.value)}
+                      >
+                        <option value="" disabled>Select Leader</option>
+                        {availableLeaders.map((u) => (
+                          <option key={u.staff_id || u.id} value={u.name}>
+                            {u.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    {editFormData.leaders.length > 1 && (
+                      <button type="button" onClick={() => removeLeader(index)} className="btn btn-outline" style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}>
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ gridColumn: '1 / -1', marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                  Save Changes
+                </button>
+                <button type="button" onClick={() => setEditingEvent(null)} className="btn btn-outline" style={{ flex: 1 }}>
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

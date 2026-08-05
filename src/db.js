@@ -336,6 +336,55 @@ export const saveEvent = async (eventData) => {
   return { ...event, name: event.subject };
 };
 
+export const updateEventInfo = async (eventId, eventData) => {
+  // 1. Update the event
+  const { data: event, error: eventErr } = await supabase
+    .from('events')
+    .update({
+      subject: eventData.name,
+      event_type: eventData.type,
+      event_date: eventData.date,
+      event_time: eventData.time,
+      venue: eventData.venue,
+      room: eventData.room,
+      department: eventData.department
+    })
+    .eq('id', eventId)
+    .select()
+    .single();
+
+  if (eventErr) {
+    console.error('Error updating event:', eventErr);
+    throw eventErr;
+  }
+
+  // 2. Re-assign leaders
+  if (eventData.leaders) {
+    // Delete existing
+    await supabase.from('event_assignments').delete().eq('event_id', eventId);
+    
+    // Insert new
+    if (eventData.leaders.length > 0) {
+      const assignments = [];
+      for (const leaderName of eventData.leaders) {
+        const { data: leader } = await supabase.from('users').select('staff_id').eq('full_name', leaderName).single();
+        if (leader) {
+          assignments.push({
+            event_id: eventId,
+            user_id: leader.staff_id,
+            assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
+          });
+        }
+      }
+      if (assignments.length > 0) {
+        await supabase.from('event_assignments').insert(assignments);
+      }
+    }
+  }
+
+  return { ...event, name: event.subject };
+};
+
 export const getEvent = async (id) => {
   if (!id) {
     const all = await getAllEvents();
