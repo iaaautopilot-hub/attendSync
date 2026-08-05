@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter } from 'lucide-react';
+import { Calendar, Trash2, ChevronRight, Target, Filter, Search } from 'lucide-react';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -9,6 +9,7 @@ const EventList = () => {
   const [deptCodeMap, setDeptCodeMap] = useState({});
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('ALL');
+  const [searchKeyword, setSearchKeyword] = useState('');
 
   const loadEvents = async () => {
     const u = await getCurrentUser();
@@ -64,9 +65,11 @@ const EventList = () => {
     ...events.map(e => e.department).filter(Boolean)
   ])).sort();
 
-  const filteredEvents = selectedDepartment === 'ALL'
-    ? events
-    : events.filter(e => e.department === selectedDepartment);
+  const filteredEvents = events.filter(e => {
+    const matchDept = selectedDepartment === 'ALL' || e.department === selectedDepartment;
+    const matchSearch = !searchKeyword || e.name?.toLowerCase().includes(searchKeyword.toLowerCase());
+    return matchDept && matchSearch;
+  });
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '950px', margin: '0 auto' }}>
@@ -85,6 +88,19 @@ const EventList = () => {
             + New Event
           </Link>
         )}
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.75rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+          <Search size={20} style={{ color: 'var(--text-secondary)', marginRight: '1rem' }} />
+          <input
+            type="text"
+            placeholder="Search event name..."
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }}
+          />
+        </div>
       </div>
 
       {availableDepartments.length > 0 && events.length > 0 && (
