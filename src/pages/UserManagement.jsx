@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAllUsers, addUser, deleteUser, updateUser, getCurrentUser, getAllDepartments } from '../db';
-import { UserPlus, Shield, Trash2, Users, Edit } from 'lucide-react';
+import { UserPlus, Shield, Trash2, Users, Edit, Search } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
 const UserManagement = () => {
@@ -10,6 +10,11 @@ const UserManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [searchKeyword, setSearchKeyword] = useState('');
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchKeyword]);
   
   const initialFormState = {
     name: '',
@@ -136,9 +141,16 @@ const UserManagement = () => {
     }
   };
 
+  const filteredUsers = users.filter(user => 
+    !searchKeyword || 
+    user.name?.toLowerCase().includes(searchKeyword.toLowerCase()) || 
+    user.staff_id?.toLowerCase().includes(searchKeyword.toLowerCase()) ||
+    user.email?.toLowerCase().includes(searchKeyword.toLowerCase())
+  );
+
   const itemsPerPage = 10;
-  const totalPages = Math.ceil(users.length / itemsPerPage);
-  const paginatedUsers = users.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const openModal = () => setIsModalOpen(true);
 
@@ -148,11 +160,24 @@ const UserManagement = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
             <h3 style={{ margin: 0, fontSize: '1.5rem' }}>Registered Staff</h3>
-            <span className="badge badge-purple" style={{ background: 'var(--aa-red)', color: 'white' }}>{users.length} Total</span>
+            <span className="badge badge-purple" style={{ background: 'var(--aa-red)', color: 'white' }}>{filteredUsers.length} Total</span>
           </div>
           <button onClick={openModal} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <UserPlus size={20} /> Register New User
           </button>
+        </div>
+
+        <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.75rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+            <Search size={20} style={{ color: 'var(--text-secondary)', marginRight: '1rem' }} />
+            <input
+              type="text"
+              placeholder="Search by name, staff ID, or email..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }}
+            />
+          </div>
         </div>
 
         <div style={{ overflowX: 'auto' }}>
@@ -218,10 +243,10 @@ const UserManagement = () => {
             </tbody>
           </table>
           
-          {users.length === 0 && (
+          {filteredUsers.length === 0 && (
             <div className="empty-state" style={{ marginTop: '2rem' }}>
               <Users size={48} />
-              <p>No users found in database.</p>
+              <p>No users found matching your search.</p>
             </div>
           )}
         </div>
