@@ -38,27 +38,27 @@ const QRDisplay = () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#050505', color: '#fff', fontFamily: 'var(--font-main)' }}>
       <div style={{ padding: '3rem', textAlign: 'center', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
-        <h1 style={{ fontSize: '4rem', marginBottom: '1rem', fontWeight: '800', background: 'linear-gradient(135deg, #FFFFFF, var(--aa-red))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+        <h1 style={{ fontSize: '2.5rem', marginBottom: '1rem', fontWeight: '800', background: 'linear-gradient(135deg, #FFFFFF, var(--aa-red))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
           {event.name}
         </h1>
         
-        <div style={{ display: 'flex', gap: '3rem', justifyContent: 'center', color: '#A0A0A0', fontSize: '1.5rem', marginBottom: '4rem', fontWeight: '500' }}>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <Calendar size={32} style={{ color: 'var(--aa-red)' }} /> {event.date} {event.time && `• ${event.time}`}
+        <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', color: '#A0A0A0', fontSize: '1.25rem', marginBottom: '2rem', fontWeight: '500' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Calendar size={24} style={{ color: 'var(--aa-red)' }} /> {event.date} {event.time && `• ${event.time}`}
           </span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <MapPin size={32} style={{ color: 'var(--aa-red)' }} /> {event.venue} ({event.room})
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MapPin size={24} style={{ color: 'var(--aa-red)' }} /> {event.venue} ({event.room})
           </span>
         </div>
 
-        <div style={{ background: '#ffffff', padding: '3.5rem', borderRadius: '40px', boxShadow: '0 30px 60px rgba(226, 22, 41, 0.2)', display: 'inline-block', border: '10px solid #FFFFFF' }}>
-          <QRCodeSVG value={attendanceLink} size={500} level="H" />
+        <div style={{ background: '#ffffff', padding: '2rem', borderRadius: '30px', boxShadow: '0 20px 40px rgba(226, 22, 41, 0.2)', display: 'inline-block', border: '6px solid #FFFFFF' }}>
+          <QRCodeSVG value={attendanceLink} size={300} level="H" />
         </div>
         
-        <div style={{ marginTop: '4rem', fontSize: '1.75rem', color: '#FFFFFF' }}>
-          <p style={{ margin: '0 0 1.5rem 0', opacity: 0.8, fontWeight: '300' }}>Scan to join the attendance session</p>
-          <a href={attendanceLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--aa-red)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', fontWeight: '700' }}>
-            {attendanceLink} <ExternalLink size={28} />
+        <div style={{ marginTop: '2rem', fontSize: '1.25rem', color: '#FFFFFF' }}>
+          <p style={{ margin: '0 0 1rem 0', opacity: 0.8, fontWeight: '300' }}>Scan to join the attendance session</p>
+          <a href={attendanceLink} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--aa-red)', textDecoration: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', fontWeight: '700' }}>
+            {attendanceLink} <ExternalLink size={20} />
           </a>
         </div>
       </div>
