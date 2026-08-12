@@ -288,7 +288,16 @@ const EventDashboard = () => {
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.hub}</td>
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.license}</td>
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>
-                      {p.scannedAt ? new Date(p.scannedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
+                      {p.scannedAt ? (
+                        (() => {
+                          const d = new Date(p.scannedAt);
+                          const day = String(d.getDate()).padStart(2, '0');
+                          const month = String(d.getMonth() + 1).padStart(2, '0');
+                          const hours = String(d.getHours()).padStart(2, '0');
+                          const mins = String(d.getMinutes()).padStart(2, '0');
+                          return `${day}/${month} ${hours}:${mins}`;
+                        })()
+                      ) : '-'}
                     </td>
                     <td style={{ borderBottom: '1px solid #E5E7EB', padding: '0.25rem 1rem' }}>
                       {p.signature && <img src={p.signature} alt="Signature" style={{ height: '40px', maxWidth: '100px' }} />}
