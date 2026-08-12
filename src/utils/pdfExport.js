@@ -136,7 +136,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   autoTable(doc, {
     startY: tableStartY, // Use calculated startY
     margin: { top: tableStartY, left: margin, right: margin, bottom: 40 },
-    head: [['NO', 'NAME', 'ID NO.', 'RANK', 'LICENSE / FAC NO.', 'HUB', 'SIGNATURE']],
+    head: [['NO', 'NAME', 'ID NO.', 'RANK', 'LICENSE / FAC NO.', 'HUB', 'TIMESTAMP', 'SIGNATURE']],
     body: participants.map((p, i) => [
       i + 1,
       p.name.toUpperCase(),
@@ -144,6 +144,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
       p.rank?.toUpperCase() || '',
       p.license || '',
       p.hub?.toUpperCase() || '',
+      p.scannedAt ? new Date(p.scannedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
       ''
     ]),
     theme: 'grid',
@@ -162,16 +163,17 @@ export const exportAttendancePDF = async (event, participants, admin) => {
       lineWidth: 0.1
     },
     columnStyles: {
-      0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 46 },
-      2: { cellWidth: 25, halign: 'center' },
-      3: { cellWidth: 23, halign: 'center' },
-      4: { cellWidth: 28, halign: 'center' },
-      5: { cellWidth: 15, halign: 'center' },
-      6: { cellWidth: 35, minCellHeight: 14 }
+      0: { cellWidth: 8, halign: 'center' },
+      1: { cellWidth: 40 },
+      2: { cellWidth: 22, halign: 'center' },
+      3: { cellWidth: 20, halign: 'center' },
+      4: { cellWidth: 25, halign: 'center' },
+      5: { cellWidth: 14, halign: 'center' },
+      6: { cellWidth: 20, halign: 'center' },
+      7: { cellWidth: 33, minCellHeight: 14 }
     },
     didDrawCell: (data) => {
-      if (data.section === 'body' && data.column.index === 6) {
+      if (data.section === 'body' && data.column.index === 7) {
         const p = participants[data.row.index];
         if (p.signature) {
           try {

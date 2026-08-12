@@ -27,18 +27,18 @@ export const getAllUsers = async () => {
   const { data, error } = await supabase
     .from('users')
     .select('*, roles(role_name), rank(rank_name), hub(hub_name)');
-  
+
   if (error) {
     console.error('Error fetching users:', error);
     return [];
   }
-  
+
   // Flatten and map for easier app usage
   return data.map(u => {
-    const legacyRole = u.roles?.role_name 
-      ? u.roles.role_name.charAt(0).toUpperCase() + u.roles.role_name.slice(1) 
+    const legacyRole = u.roles?.role_name
+      ? u.roles.role_name.charAt(0).toUpperCase() + u.roles.role_name.slice(1)
       : (ROLE_ID_MAP[u.role_id] || 'Chairman');
-    
+
     return {
       ...u,
       name: u.full_name,
@@ -61,14 +61,14 @@ export const validateLogin = async (username, password) => {
     .from('users')
     .select('*, roles(role_name)')
     .ilike('username', username);
-    
+
   if (error || !data || data.length === 0) {
     console.warn('No user found.');
     return null;
   }
 
   const user = data[0];
-  
+
   // Try bcrypt comparison
   let isMatch = false;
   try {
@@ -94,9 +94,9 @@ export const validateLogin = async (username, password) => {
 
   console.log('Login successful for:', user.full_name);
   const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
-  return { 
-    ...user, 
-    name: user.full_name, 
+  return {
+    ...user,
+    name: user.full_name,
     multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
     role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole
   };
@@ -116,32 +116,32 @@ export const logoutUser = async () => {
 
 export const getCurrentUser = async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  
+
   if (!session) return null;
-  
+
   const email = session.user.email;
-  
+
   const { data, error } = await supabase
     .from('users')
     .select('*, roles(role_name)')
     .eq('email', email);
-    
+
   const user = data && data.length > 0 ? data[0] : null;
-  
+
   if (error || !user) {
     console.warn("Authenticated via Google but email not found in users table:", email);
     return null;
   }
-  
+
   const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
-  
-  return { 
-    ...user, 
-    name: user.full_name, 
-    staff_id: user.staff_id, 
+
+  return {
+    ...user,
+    name: user.full_name,
+    staff_id: user.staff_id,
     multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
-    role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole, 
-    token: session.access_token 
+    role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole,
+    token: session.access_token
   };
 };
 
@@ -149,7 +149,7 @@ export const getCurrentUser = async () => {
 export const addUser = async (userData) => {
   const rolesArr = userData.multi_roles || [userData.role];
   const roleId = getRoleId(rolesArr[0]);
-  
+
   // Hash password before saving
   const salt = bcrypt.genSaltSync(10);
   const hashedPassword = bcrypt.hashSync(userData.password || '123', salt);
@@ -157,7 +157,7 @@ export const addUser = async (userData) => {
   const { data, error } = await supabase
     .from('users')
     .insert([{
-      staff_id: userData.staffId || userData.username, 
+      staff_id: userData.staffId || userData.username,
       full_name: userData.name,
       username: userData.username || userData.staffId,
       password: hashedPassword,
@@ -262,7 +262,7 @@ export const deleteDepartment = async (id) => {
 export const updateUserPassword = async (username, newPassword) => {
   const salt = bcrypt.genSaltSync(10);
   const hash = bcrypt.hashSync(newPassword, salt);
-  
+
   const { error } = await supabase
     .from('users')
     .update({ password: hash, must_change_password: false })
@@ -362,7 +362,7 @@ export const updateEventInfo = async (eventId, eventData) => {
   if (eventData.leaders) {
     // Delete existing
     await supabase.from('event_assignments').delete().eq('event_id', eventId);
-    
+
     // Insert new
     if (eventData.leaders.length > 0) {
       const assignments = [];
@@ -420,8 +420,8 @@ export const getEvent = async (id) => {
 export const activateEvent = async (id, signatureData, remarks = '') => {
   const { data, error } = await supabase
     .from('events')
-    .update({ 
-      is_active: true, 
+    .update({
+      is_active: true,
       leader_signature: signatureData,
       remarks: remarks,
       activated_at: new Date().toISOString()
@@ -434,7 +434,7 @@ export const activateEvent = async (id, signatureData, remarks = '') => {
     console.error('Error activating event:', error);
     return { error };
   }
-  
+
   // Re-fetch full event details to ensure all fields like leaderDetails are present
   return await getEvent(id);
 };
@@ -444,7 +444,7 @@ export const updateEventRemarks = async (id, remarks) => {
     .from('events')
     .update({ remarks })
     .eq('id', id);
-    
+
   if (error) {
     console.error('Database Error (Updating Remarks):', error);
     return false;
@@ -489,7 +489,7 @@ export const findUserByStaffId = async (staffId) => {
     .eq('staff_id', staffId)
     .eq('staff_id', staffId)
     .single();
-  
+
   if (error || !data) return null;
   return {
     ...data,
@@ -507,7 +507,7 @@ export const checkAttendanceExists = async (eventId, staffId) => {
     .eq('event_id', eventId)
     .eq('staff_id', staffId)
     .maybeSingle();
-  
+
   return !!data;
 };
 
@@ -526,7 +526,7 @@ export const saveSignature = async (participantData) => {
       remarks: data.remarks || ''
     }])
     .select();
-  
+
   if (error) {
     console.error('Error adding participant:', error);
     return { error };

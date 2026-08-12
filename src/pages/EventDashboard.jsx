@@ -11,6 +11,11 @@ const EventDashboard = () => {
   const [participants, setParticipants] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [remarks, setRemarks] = useState('');
+  const [loaOverrides, setLoaOverrides] = useState({});
+
+  const handleLoaChange = (staffId, value) => {
+    setLoaOverrides(prev => ({ ...prev, [staffId]: value }));
+  };
 
   const loadData = async () => {
     const activeEvent = await getEvent(eventId);
@@ -71,8 +76,18 @@ const EventDashboard = () => {
 
   const handleGenerateSoftCopy = async () => {
     if (participants.length === 0) return;
+    
+    // Inject the overridden LOAs into event.leaderDetails
+    const updatedEvent = {
+      ...event,
+      leaderDetails: (event.leaderDetails || []).map(ld => ({
+        ...ld,
+        loa_no: loaOverrides[ld.staff_id] || ld.loa_no
+      }))
+    };
+    
     // Pass event.creator (whoever created the event), not the logged-in user
-    await exportAttendancePDF(event, participants, event.creator);
+    await exportAttendancePDF(updatedEvent, participants, event.creator);
   };
 
   if (!event) {
@@ -189,6 +204,32 @@ const EventDashboard = () => {
                 ></textarea>
               </div>
 
+              {event.leaderDetails && event.leaderDetails.length > 0 && (
+                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', width: '100%', textAlign: 'left' }}>
+                  <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--aa-red)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                    {event.type === 'Training' ? 'Instructor' : 'Chairperson'} LOA Details
+                  </p>
+                  {event.leaderDetails.map(ld => (
+                    <div key={ld.staff_id} style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
+                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                        {ld.name} ({ld.staff_id})
+                      </label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        placeholder={`Default LOA: ${ld.loa_no || 'None'}`}
+                        value={loaOverrides[ld.staff_id] || ''}
+                        onChange={(e) => handleLoaChange(ld.staff_id, e.target.value)}
+                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--aa-white)', padding: '0.75rem', borderRadius: '8px' }}
+                      />
+                    </div>
+                  ))}
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    * Leave blank to use the default LOA number from User Management. Overrides here apply to the PDF export.
+                  </p>
+                </div>
+              )}
+
               <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '350px' }}>
                 Attendance is now being recorded. Display the QR code on a large screen for participants.
               </p>
@@ -233,6 +274,7 @@ const EventDashboard = () => {
                   <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Rank</th>
                   <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>HUB</th>
                   <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Lic/Fac No.</th>
+                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Timestamp</th>
                   <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Signature</th>
                 </tr>
               </thead>
@@ -245,6 +287,9 @@ const EventDashboard = () => {
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.rank}</td>
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.hub}</td>
                     <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.license}</td>
+                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>
+                      {p.scannedAt ? new Date(p.scannedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-'}
+                    </td>
                     <td style={{ borderBottom: '1px solid #E5E7EB', padding: '0.25rem 1rem' }}>
                       {p.signature && <img src={p.signature} alt="Signature" style={{ height: '40px', maxWidth: '100px' }} />}
                     </td>
