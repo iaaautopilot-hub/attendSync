@@ -182,7 +182,7 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     didDrawCell: (data) => {
       if (data.section === 'body' && data.column.index === 7) {
         const p = participants[data.row.index];
-        if (p.signature) {
+        if (p && p.signature) {
           try {
             // QR is now square 12.5x12.5 for 35x35 feel
             doc.addImage(p.signature, 'PNG', data.cell.x + 11.25, data.cell.y + 0.75, 12.5, 12.5);
