@@ -10,6 +10,7 @@ import AttendanceForm from './pages/AttendanceForm';
 import UserManagement from './pages/UserManagement';
 import ManageDepartments from './pages/ManageDepartments';
 import ChangePassword from './pages/ChangePassword';
+import TrainingAnalytics from './pages/TrainingAnalytics';
 import Login from './pages/Login';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -74,6 +75,11 @@ function AppNavigation() {
           <Link to="/events" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
             All Events
           </Link>
+          {user.multi_roles?.some(r => ['admin', 'system administrator', 'instructor'].includes(r.toLowerCase())) && (
+            <Link to="/analytics" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
+              Training Analytics
+            </Link>
+          )}
           {user.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
             <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
               Manage Users
@@ -114,6 +120,11 @@ function App() {
             <Route path="/change-password" element={
               <ProtectedRoute>
                 <ChangePassword />
+              </ProtectedRoute>
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute allowedRoles={['Admin', 'System Administrator', 'Instructor']}>
+                <TrainingAnalytics />
               </ProtectedRoute>
             } />
             <Route path="/users" element={

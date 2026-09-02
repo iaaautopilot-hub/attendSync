@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser, getAllDepartments } from '../db';
-import { Rocket, Users, Target } from 'lucide-react';
+import { Rocket, Users, Target, Clock } from 'lucide-react';
+import { calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -9,6 +10,8 @@ const CreateEvent = () => {
     name: '',
     date: '',
     time: '',
+    startTime: '09:00',
+    endTime: '17:00',
     type: 'Meeting',
     venue: '',
     room: '',
@@ -73,8 +76,15 @@ const CreateEvent = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const actualLeaders = formData.leaders.filter(l => l.trim() !== '');
+    
+    // Determine formatted time based on event type
+    const eventTime = formData.type === 'Training' 
+      ? `${formData.startTime} - ${formData.endTime}`
+      : formData.time;
+
     const event = await saveEvent({
       ...formData,
+      time: eventTime,
       leaders: actualLeaders,
       created_by: user?.staff_id
     });
@@ -101,7 +111,7 @@ Event Details:
 - Subject: ${formData.name}
 - Type: ${formData.type}
 - Date: ${formData.date}
-- Time: ${formData.time}
+- Time: ${eventTime}
 - Department: ${formData.department}
 - Venue: ${formData.venue}
 - Room: ${formData.room}
@@ -133,6 +143,10 @@ Thank you.`;
     // Navigate to dashboard automatically (if no leaders)
     navigate(`/dashboard/${event.id}`);
   };
+
+  const trainingHours = formData.type === 'Training' 
+    ? calculateDurationHours(formData.startTime, formData.endTime) 
+    : 0;
 
   const leaderLabel = formData.type === 'Training' ? 'Instructor' : 'Chairman';
 
@@ -168,10 +182,45 @@ Thank you.`;
             <input required type="date" name="date" className="form-control" value={formData.date} onChange={handleChange} />
           </div>
 
-          <div className="form-group">
-            <label>Event Time</label>
-            <input required type="time" name="time" className="form-control" value={formData.time} onChange={handleChange} />
-          </div>
+          {formData.type === 'Training' ? (
+            <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                <label style={{ margin: 0 }}>Training Session Hours</label>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
+                  ⏱️ Duration: {formatDurationDisplay(trainingHours)} ({trainingHours} hrs)
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>Start Time</span>
+                  <input 
+                    required 
+                    type="time" 
+                    name="startTime" 
+                    className="form-control" 
+                    value={formData.startTime} 
+                    onChange={handleChange} 
+                  />
+                </div>
+                <div>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>End Time</span>
+                  <input 
+                    required 
+                    type="time" 
+                    name="endTime" 
+                    className="form-control" 
+                    value={formData.endTime} 
+                    onChange={handleChange} 
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="form-group">
+              <label>Event Time</label>
+              <input required type="time" name="time" className="form-control" value={formData.time} onChange={handleChange} />
+            </div>
+          )}
 
           <div className="form-group">
             <label>Department</label>

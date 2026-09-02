@@ -558,3 +558,119 @@ export const saveSignature = async (participantData) => {
 
   return { data: result ? result[0] : null };
 };
+
+// --- TRAINING ANALYTICS ---
+
+export const getTrainingAnalytics = async (filters = {}) => {
+  const { data: events, error } = await supabase
+    .from('events')
+    .select('*, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no)), event_signatures(id)')
+    .eq('event_type', 'Training')
+    .order('event_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching training analytics:', error);
+    return {
+      instructors: [],
+      totals: { totalHours: 0, totalSessions: 0, totalInstructors: 0, avgHoursPerInstructor: 0 },
+      events: []
+    };
+  }
+
+  // Helper inside db for time parsing if not importing
+  const parseHours = (timeStr) => {
+    if (!timeStr) return 0;
+    let start = '', end = '';
+    if (timeStr.includes(' - ')) {
+      [start, end] = timeStr.split(' - ').map(s => s.trim());
+    } else if (timeStr.includes(' to ')) {
+      [start, end] = timeStr.split(' to ').map(s => s.trim());
+    } else {
+      return 0; // Single time, default 0 or not measurable without end time
+    }
+    const [sH, sM] = start.split(':').map(Number);
+    const [eH, eM] = end.split(':').map(Number);
+    if (isNaN(sH) || isNaN(sM) || isNaN(eH) || isNaN(eM)) return 0;
+    let mins = (eH * 60 + eM) - (sH * 60 + sM);
+    if (mins < 0) mins += 24 * 60;
+    return Math.round((mins / 60) * 100) / 100;
+  };
+
+  const instructorMap = {};
+  let overallTotalHours = 0;
+  const processedEvents = [];
+
+  events.forEach(e => {
+    // Apply filters if provided
+    if (filters.department && filters.department !== 'ALL' && e.department !== filters.department) {
+      return;
+    }
+    if (filters.startDate && e.event_date < filters.startDate) {
+      return;
+    }
+    if (filters.endDate && e.event_date > filters.endDate) {
+      return;
+    }
+    if (filters.monthYear) {
+      // Format YYYY-MM
+      const eventMY = e.event_date?.substring(0, 7);
+      if (eventMY !== filters.monthYear) return;
+    }
+
+    const duration = parseHours(e.event_time);
+    overallTotalHours += duration;
+
+    const eventObj = {
+      id: e.id,
+      name: e.subject,
+      date: e.event_date,
+      time: e.event_time,
+      duration,
+      venue: e.venue,
+      room: e.room,
+      department: e.department,
+      participantsCount: e.event_signatures?.length || 0,
+      instructors: e.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || []
+    };
+    processedEvents.push(eventObj);
+
+    // Aggregate by assigned instructors
+    (e.event_assignments || []).forEach(a => {
+      const u = a.users;
+      if (!u) return;
+
+      const key = u.staff_id || u.full_name;
+      if (!instructorMap[key]) {
+        instructorMap[key] = {
+          staff_id: u.staff_id,
+          name: u.full_name,
+          loa_no: u.loa_no || '-',
+          totalHours: 0,
+          totalSessions: 0,
+          sessions: []
+        };
+      }
+
+      instructorMap[key].totalHours += duration;
+      instructorMap[key].totalHours = Math.round(instructorMap[key].totalHours * 100) / 100;
+      instructorMap[key].totalSessions += 1;
+      instructorMap[key].sessions.push(eventObj);
+    });
+  });
+
+  const instructors = Object.values(instructorMap).sort((a, b) => b.totalHours - a.totalHours);
+  const totalInstructors = instructors.length;
+  const avgHours = totalInstructors > 0 ? Math.round((overallTotalHours / totalInstructors) * 100) / 100 : 0;
+
+  return {
+    instructors,
+    totals: {
+      totalHours: Math.round(overallTotalHours * 100) / 100,
+      totalSessions: processedEvents.length,
+      totalInstructors,
+      avgHoursPerInstructor: avgHours
+    },
+    events: processedEvents
+  };
+};
+

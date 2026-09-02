@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye } from 'lucide-react';
+import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock } from 'lucide-react';
+import { parseEventTime, calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -75,11 +76,15 @@ const EventList = () => {
     const users = await getUsersByRole(requiredRole);
     setAvailableLeaders(users);
     
+    const parsedTime = parseEventTime(event.time);
+
     setEditingEvent(event);
     setEditFormData({
       name: event.name,
       date: event.date,
-      time: event.time,
+      time: event.time || '',
+      startTime: parsedTime.startTime || '09:00',
+      endTime: parsedTime.endTime || '17:00',
       type: event.type,
       venue: event.venue,
       room: event.room,
@@ -91,8 +96,14 @@ const EventList = () => {
   const handleEditSubmit = async (e) => {
     e.preventDefault();
     const actualLeaders = editFormData.leaders.filter(l => l.trim() !== '');
+    
+    const eventTime = editFormData.type === 'Training'
+      ? `${editFormData.startTime} - ${editFormData.endTime}`
+      : editFormData.time;
+
     await updateEventInfo(editingEvent.id, {
       ...editFormData,
+      time: eventTime,
       leaders: actualLeaders
     });
     setEditingEvent(null);
@@ -400,10 +411,43 @@ const EventList = () => {
                 <input required type="date" className="form-control" value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} />
               </div>
 
-              <div className="form-group">
-                <label>Event Time</label>
-                <input required type="time" className="form-control" value={editFormData.time} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} />
-              </div>
+              {editFormData.type === 'Training' ? (
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                    <label style={{ margin: 0 }}>Training Session Hours</label>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
+                      ⏱️ Duration: {formatDurationDisplay(calculateDurationHours(editFormData.startTime, editFormData.endTime))} ({calculateDurationHours(editFormData.startTime, editFormData.endTime)} hrs)
+                    </span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>Start Time</span>
+                      <input 
+                        required 
+                        type="time" 
+                        className="form-control" 
+                        value={editFormData.startTime} 
+                        onChange={(e) => setEditFormData({...editFormData, startTime: e.target.value})} 
+                      />
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>End Time</span>
+                      <input 
+                        required 
+                        type="time" 
+                        className="form-control" 
+                        value={editFormData.endTime} 
+                        onChange={(e) => setEditFormData({...editFormData, endTime: e.target.value})} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="form-group">
+                  <label>Event Time</label>
+                  <input required type="time" className="form-control" value={editFormData.time} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} />
+                </div>
+              )}
 
               <div className="form-group">
                 <label>Venue</label>
