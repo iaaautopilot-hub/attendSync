@@ -44,7 +44,7 @@ const UserManagement = () => {
     const init = async () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
-      if (u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
+      if (u?.multi_roles?.some(r => ['system administrator', 'admin'].includes(r.toLowerCase()))) {
         await loadData();
       } else {
         setLoading(false);
@@ -55,7 +55,7 @@ const UserManagement = () => {
 
   if (loading) return null;
 
-  if (!currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')) {
+  if (!currentUser?.multi_roles?.some(r => ['system administrator', 'admin'].includes(r.toLowerCase()))) {
     return <Navigate to="/" replace />;
   }
 
@@ -221,21 +221,23 @@ const UserManagement = () => {
                       >
                         <Edit size={18} />
                       </button>
-                      <button 
-                        onClick={() => handleDeleteUser(user.staff_id)} 
-                        className="btn btn-outline" 
-                        style={{ 
-                          padding: '0.4rem', 
-                          color: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 'var(--text-secondary)' : '#F87171', 
-                          border: 'none',
-                          opacity: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 0.3 : 1,
-                          cursor: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 'not-allowed' : 'pointer'
-                        }}
-                        disabled={user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01'}
-                        title={user.username?.toLowerCase() === 'admin' ? "System Account Cannot Be Deleted" : "Delete User"}
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      {currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
+                        <button 
+                          onClick={() => handleDeleteUser(user.staff_id)} 
+                          className="btn btn-outline" 
+                          style={{ 
+                            padding: '0.4rem', 
+                            color: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 'var(--text-secondary)' : '#F87171', 
+                            border: 'none',
+                            opacity: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 0.3 : 1,
+                            cursor: (user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01') ? 'not-allowed' : 'pointer'
+                          }}
+                          disabled={user.username?.toLowerCase() === 'admin' || user.staff_id === 'ADMIN-01'}
+                          title={user.username?.toLowerCase() === 'admin' ? "System Account Cannot Be Deleted" : "Delete User"}
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

@@ -299,25 +299,25 @@ const EventList = () => {
                         >
                           <Eye size={16} /> View
                         </Link>
+                        {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
+                          <button 
+                            onClick={(e) => openEditModal(e, event)} 
+                            className="btn btn-outline" 
+                            style={{ padding: '0.4rem', color: 'var(--text-secondary)', border: 'none' }}
+                            title="Edit Event"
+                          >
+                            <Edit size={18} />
+                          </button>
+                        )}
                         {user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
-                          <>
-                            <button 
-                              onClick={(e) => openEditModal(e, event)} 
-                              className="btn btn-outline" 
-                              style={{ padding: '0.4rem', color: 'var(--text-secondary)', border: 'none' }}
-                              title="Edit Event"
-                            >
-                              <Edit size={18} />
-                            </button>
-                            <button 
-                              onClick={(e) => handleDelete(event.id, e)} 
-                              className="btn btn-outline" 
-                              style={{ padding: '0.4rem', color: '#F87171', border: 'none' }}
-                              title="Delete Event"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </>
+                          <button 
+                            onClick={(e) => handleDelete(event.id, e)} 
+                            className="btn btn-outline" 
+                            style={{ padding: '0.4rem', color: '#F87171', border: 'none' }}
+                            title="Delete Event"
+                          >
+                            <Trash2 size={18} />
+                          </button>
                         )}
                       </div>
                     </td>

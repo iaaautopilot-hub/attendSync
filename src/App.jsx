@@ -74,15 +74,15 @@ function AppNavigation() {
           <Link to="/events" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
             All Events
           </Link>
+          {user.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
+            <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
+              Manage Users
+            </Link>
+          )}
           {user.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
-            <>
-              <Link to="/users" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
-                Manage Users
-              </Link>
-              <Link to="/departments" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
-                Departments
-              </Link>
-            </>
+            <Link to="/departments" className="btn btn-outline" style={{ padding: '0.6rem 1.2rem' }}>
+              Departments
+            </Link>
           )}
           <div style={{ textAlign: 'right', borderLeft: '1px solid var(--border-color)', paddingLeft: '1.25rem' }}>
             <div style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--aa-white)' }}>{user.username}</div>
@@ -117,7 +117,7 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/users" element={
-              <ProtectedRoute allowedRoles={['System Administrator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'System Administrator']}>
                 <UserManagement />
               </ProtectedRoute>
             } />
