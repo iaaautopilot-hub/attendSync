@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser, getAllDepartments } from '../db';
 import { Rocket, Users, Target, Clock } from 'lucide-react';
 import { calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
+import { getAllowedDepartmentsForUser } from '../utils/departmentUtils';
 
 const CreateEvent = () => {
   const navigate = useNavigate();
@@ -35,11 +36,8 @@ const CreateEvent = () => {
       const depts = await getAllDepartments();
       setDepartments(depts);
       
-      let defaultDept = depts.length > 0 ? depts[0].name : 'Flight Operation';
-      const deptRole = u?.multi_roles?.find(r => r.startsWith('dept:'));
-      if (deptRole) {
-        defaultDept = deptRole.split(':')[1];
-      }
+      const allowedDepts = getAllowedDepartmentsForUser(u, depts);
+      let defaultDept = allowedDepts.length > 0 ? allowedDepts[0].name : (depts.length > 0 ? depts[0].name : 'Flight Operation');
       
       setFormData(prev => ({
         ...prev,
@@ -222,22 +220,31 @@ Thank you.`;
             </div>
           )}
 
-          <div className="form-group">
-            <label>Department</label>
-            <select 
-              name="department" 
-              className="form-control" 
-              value={formData.department} 
-              onChange={handleChange}
-              required
-              disabled={user?.multi_roles?.some(r => r.startsWith('dept:'))}
-              style={{ backgroundColor: user?.multi_roles?.some(r => r.startsWith('dept:')) ? 'rgba(255,255,255,0.05)' : '' }}
-            >
-              {departments.map(dept => (
-                <option key={dept.id} value={dept.name}>{dept.name}</option>
-              ))}
-            </select>
-          </div>
+          {(() => {
+            const isSysAdmin = user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
+            const allowed = getAllowedDepartmentsForUser(user, departments);
+            const selectable = isSysAdmin ? departments : allowed;
+            const isDisabled = !isSysAdmin && selectable.length <= 1;
+
+            return (
+              <div className="form-group">
+                <label>Department</label>
+                <select 
+                  name="department" 
+                  className="form-control" 
+                  value={formData.department} 
+                  onChange={handleChange}
+                  required
+                  disabled={isDisabled}
+                  style={{ backgroundColor: isDisabled ? 'rgba(255,255,255,0.05)' : '' }}
+                >
+                  {selectable.map(dept => (
+                    <option key={dept.id || dept.name} value={dept.name}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          })()}
 
           <div className="form-group">
             <label>Venue</label>

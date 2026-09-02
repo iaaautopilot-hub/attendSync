@@ -2,6 +2,8 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import QRCode from 'qrcode';
 import { getAllDepartments } from '../db';
+import { isFlightOperationIntegrated } from './departmentUtils';
+
 const drawBox = (doc, x, y, w, h) => {
   doc.setDrawColor(0);
   doc.setLineWidth(0.3);
@@ -19,7 +21,8 @@ export const exportAttendancePDF = async (event, participants, admin) => {
   let deptCode = codeMap[dept];
   if (!deptCode) {
     if (dept === 'Flight Operation' || dept === 'FOP') deptCode = 'FOP';
-    else deptCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
+    else if (isFlightOperationIntegrated(dept)) deptCode = 'FOPI';
+    else deptCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 4);
   }
 
   const doc = new jsPDF('p', 'mm', 'a4');

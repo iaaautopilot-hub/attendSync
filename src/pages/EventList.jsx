@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
 import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock } from 'lucide-react';
 import { parseEventTime, calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
+import { canAdminAccessDepartment, getAllowedDepartmentsForUser, canUserViewOrEditEvent, isFlightOperationIntegrated } from '../utils/departmentUtils';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -36,18 +37,17 @@ const EventList = () => {
       // System Administrator sees all events
       setEvents([...allEvents]); 
     } else if (u?.multi_roles?.some(r => r.toLowerCase() === 'admin')) {
-      // Admin sees events from their specific department
+      // Admin sees events from their specific department and integrated department
       const deptRole = u.multi_roles.find(r => r.startsWith('dept:'));
       if (deptRole) {
         const adminDept = deptRole.split(':')[1];
-        setEvents(allEvents.filter(e => e.department === adminDept));
+        setEvents(allEvents.filter(e => canAdminAccessDepartment(adminDept, e.department)));
       } else {
-        // If no department is set for an admin, they see no events (or we could default to all, but restricted is safer based on requirements)
         setEvents([]);
       }
     } else {
       // Chairmen/Instructors only see events where they are assigned leaders
-      const myEvents = allEvents.filter(e => e.leaders && e.leaders.includes(u.full_name));
+      const myEvents = allEvents.filter(e => e.leaders && (e.leaders.includes(u.full_name) || e.leaders.includes(u.name)));
       setEvents(myEvents);
     }
   };
@@ -129,8 +129,10 @@ const EventList = () => {
     }
   };
 
+  const isSysAdmin = user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
+  const userAllowedDepts = getAllowedDepartmentsForUser(user, departments);
   const availableDepartments = Array.from(new Set([
-    ...departments.map(d => d.name),
+    ...(isSysAdmin ? departments.map(d => d.name) : userAllowedDepts.map(d => d.name)),
     ...events.map(e => e.department).filter(Boolean)
   ])).sort();
 
@@ -277,7 +279,8 @@ const EventList = () => {
                           let dCode = deptCodeMap[dept];
                           if (!dCode) {
                             if (dept === 'Flight Operation' || dept === 'FOP') dCode = 'FOP';
-                            else dCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 3);
+                            else if (isFlightOperationIntegrated(dept)) dCode = 'FOPI';
+                            else dCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 4);
                           }
                           const nId = (event.event_code || '0').replace(/\D/g, '').padStart(5, '0');
                           return `IAA/${dCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date(event.date).getFullYear()}/${nId}`;
@@ -399,9 +402,18 @@ const EventList = () => {
 
               <div className="form-group">
                 <label>Department</label>
-                <select className="form-control" value={editFormData.department} onChange={(e) => setEditFormData({...editFormData, department: e.target.value})}>
-                  {departments.map(dept => (
-                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                <select 
+                  className="form-control" 
+                  value={editFormData.department} 
+                  onChange={(e) => setEditFormData({...editFormData, department: e.target.value})}
+                  disabled={!isSysAdmin && getAllowedDepartmentsForUser(user, departments).length <= 1}
+                  style={{ backgroundColor: (!isSysAdmin && getAllowedDepartmentsForUser(user, departments).length <= 1) ? 'rgba(255,255,255,0.05)' : '' }}
+                >
+                  {Array.from(new Set([
+                    editFormData.department,
+                    ...(isSysAdmin ? departments.map(d => d.name) : getAllowedDepartmentsForUser(user, departments).map(d => d.name))
+                  ])).filter(Boolean).map(deptName => (
+                    <option key={deptName} value={deptName}>{deptName}</option>
                   ))}
                 </select>
               </div>

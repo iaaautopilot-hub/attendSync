@@ -685,8 +685,10 @@ export const getTrainingAnalytics = async (filters = {}) => {
 
   events.forEach(e => {
     // Apply filters if provided
-    if (filters.department && filters.department !== 'ALL' && e.department !== filters.department) {
-      return;
+    if (filters.department && filters.department !== 'ALL') {
+      if (e.department !== filters.department) return;
+    } else if (filters.allowedDepartments && filters.allowedDepartments.length > 0) {
+      if (!filters.allowedDepartments.includes(e.department)) return;
     }
     if (filters.startDate && e.event_date < filters.startDate) {
       return;

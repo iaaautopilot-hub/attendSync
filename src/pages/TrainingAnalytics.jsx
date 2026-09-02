@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getTrainingAnalytics, getAllDepartments, getCurrentUser } from '../db';
 import { Clock, Users, Award, BookOpen, Search, Filter, Download, Calendar, ChevronRight, X, Eye, FileText, CheckCircle2 } from 'lucide-react';
 import { formatDurationDisplay } from '../utils/timeUtils';
+import { getAllowedDepartmentsForUser } from '../utils/departmentUtils';
 
 const TrainingAnalytics = () => {
   const [analyticsData, setAnalyticsData] = useState({
@@ -21,17 +22,24 @@ const TrainingAnalytics = () => {
 
   const loadData = async () => {
     setLoading(true);
-    const [u, depts, data] = await Promise.all([
+    const [u, depts] = await Promise.all([
       getCurrentUser(),
-      getAllDepartments(),
-      getTrainingAnalytics({
-        department: selectedDepartment,
-        monthYear: selectedMonth || undefined
-      })
+      getAllDepartments()
     ]);
 
     setCurrentUser(u);
     setDepartments(depts || []);
+
+    const isSysAdmin = u?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
+    const allowed = getAllowedDepartmentsForUser(u, depts || []);
+    const allowedNames = allowed.map(d => d.name);
+
+    const data = await getTrainingAnalytics({
+      department: selectedDepartment,
+      allowedDepartments: !isSysAdmin && allowedNames.length > 0 ? allowedNames : undefined,
+      monthYear: selectedMonth || undefined
+    });
+
     setAnalyticsData(data);
     setLoading(false);
   };
@@ -218,8 +226,11 @@ const TrainingAnalytics = () => {
               style={{ padding: '0.55rem 1rem', fontSize: '0.9rem', width: 'auto' }}
             >
               <option value="ALL">All Departments</option>
-              {departments.map(d => (
-                <option key={d.id} value={d.name}>{d.name}</option>
+              {(currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator')
+                ? departments
+                : getAllowedDepartmentsForUser(currentUser, departments)
+              ).map(d => (
+                <option key={d.id || d.name} value={d.name}>{d.name}</option>
               ))}
             </select>
           </div>
