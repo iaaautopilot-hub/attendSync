@@ -247,20 +247,20 @@ const EventList = () => {
           <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '220px' }}>Event ID</th>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, minWidth: '280px' }}>Name</th>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '180px' }}>Date & Time</th>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, minWidth: '200px', whiteSpace: 'nowrap' }}>Location</th>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '170px' }}>Department</th>
-                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Actions</th>
+                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '0.8rem' }}>
+                  <th style={{ padding: '1rem 0.85rem 1rem 1.25rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Event ID</th>
+                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600 }}>Name</th>
+                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Date & Time</th>
+                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600 }}>Location</th>
+                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Department</th>
+                  <th style={{ padding: '1rem 1.25rem 1rem 0.85rem', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedEvents.map(event => (
                   <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'all 0.3s ease' }} className="user-row-hover">
-                    <td style={{ padding: '1.25rem 1.75rem', whiteSpace: 'nowrap' }}>
-                      <span style={{ fontSize: '0.78rem', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.7rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.05em', display: 'inline-block' }}>
+                    <td style={{ padding: '0.9rem 0.85rem 0.9rem 1.25rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.72rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.5rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.04em', display: 'inline-block' }}>
                         { (() => {
                           const dept = (event.department || 'Flight Operation');
                           let dCode = deptCodeMap[dept];
@@ -273,54 +273,54 @@ const EventList = () => {
                         })() }
                       </span>
                     </td>
-                    <td style={{ padding: '1.25rem 1.75rem', minWidth: '280px' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
-                        <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ padding: '0.25rem 0.6rem', fontSize: '0.7rem', flexShrink: 0 }}>
+                    <td style={{ padding: '0.9rem 0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                        <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ padding: '0.2rem 0.45rem', fontSize: '0.65rem', flexShrink: 0 }}>
                           {event.type}
                         </span>
-                        <span style={{ fontWeight: 600, fontSize: '0.98rem', color: 'var(--aa-white)' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--aa-white)', wordBreak: 'break-word' }}>
                           {event.name}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: '1.25rem 1.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '0.9rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
                       {event.date} {event.time && `• ${event.time}`}
                     </td>
-                    <td style={{ padding: '1.25rem 1.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '0.9rem 0.85rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                       📍 {event.venue} {event.room && `(${event.room})`}
                     </td>
-                    <td style={{ padding: '1.25rem 1.75rem', whiteSpace: 'nowrap' }}>
-                      <span style={{ background: 'rgba(255,255,255,0.04)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    <td style={{ padding: '0.9rem 0.85rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ background: 'rgba(255,255,255,0.04)', padding: '0.25rem 0.55rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                         {event.department}
                       </span>
                     </td>
-                    <td style={{ padding: '1.25rem 1.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <td style={{ padding: '0.9rem 1.25rem 0.9rem 0.85rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Link 
                           to={`/dashboard/${event.id}`} 
                           className="btn btn-outline"
-                          style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                          style={{ padding: '0.35rem 0.7rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
                         >
-                          <Eye size={16} /> View
+                          <Eye size={15} /> View
                         </Link>
                         {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
                           <button 
                             onClick={(e) => openEditModal(e, event)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.45rem', color: 'var(--text-secondary)', border: 'none' }}
+                            style={{ padding: '0.35rem 0.5rem', color: 'var(--text-secondary)', border: 'none' }}
                             title="Edit Event"
                           >
-                            <Edit size={18} />
+                            <Edit size={16} />
                           </button>
                         )}
                         {user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
                           <button 
                             onClick={(e) => handleDelete(event.id, e)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.45rem', color: '#F87171', border: 'none' }}
+                            style={{ padding: '0.35rem 0.5rem', color: '#F87171', border: 'none' }}
                             title="Delete Event"
                           >
-                            <Trash2 size={18} />
+                            <Trash2 size={16} />
                           </button>
                         )}
                       </div>
