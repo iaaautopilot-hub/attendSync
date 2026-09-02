@@ -23,7 +23,7 @@ export const calculateDurationHours = (startTime, endTime) => {
   return Math.round(hours * 100) / 100;
 };
 
-export const parseEventTime = (timeStr) => {
+export const parseEventTime = (timeStr, remarks = '') => {
   if (!timeStr) return { startTime: '', endTime: '', duration: 0 };
   
   // Format: "09:00 - 17:00" or "09:00 to 17:00"
@@ -41,8 +41,18 @@ export const parseEventTime = (timeStr) => {
     return { startTime: cleanStart, endTime: cleanEnd, duration };
   }
   
-  // Single time (e.g. "14:00:00" or "14:00")
   const cleanStart = timeStr.substring(0, 5);
+
+  // Check if remarks contains [END:HH:mm] tag
+  if (remarks && typeof remarks === 'string' && remarks.includes('[END:')) {
+    const match = remarks.match(/\[END:([^\]]+)\]/);
+    if (match && match[1]) {
+      const cleanEnd = match[1].trim().substring(0, 5);
+      const duration = calculateDurationHours(cleanStart, cleanEnd);
+      return { startTime: cleanStart, endTime: cleanEnd, duration };
+    }
+  }
+  
   return { startTime: cleanStart, endTime: '', duration: 0 };
 };
 

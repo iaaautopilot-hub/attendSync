@@ -280,19 +280,53 @@ export const getAllEvents = async () => {
 
   if (error) return [];
 
-  return data.map(e => ({
-    ...e,
-    name: e.subject,
-    date: e.event_date,
-    time: e.event_time,
-    isActive: e.is_active && (!e.activated_at || (new Date() - new Date(e.activated_at)) < 8 * 3600 * 1000),
-    isExpired: e.activated_at && (new Date() - new Date(e.activated_at)) >= 8 * 3600 * 1000,
-    type: e.event_type,
-    leaders: e.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || []
-  }));
+  return data.map(e => {
+    let displayTime = e.event_time ? e.event_time.substring(0, 5) : '';
+    let cleanRemarks = e.remarks || '';
+    if (e.event_type === 'Training' && cleanRemarks.includes('[END:')) {
+      const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
+      if (match && match[1]) {
+        displayTime = `${displayTime} - ${match[1].trim()}`;
+        cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
+      }
+    }
+
+    return {
+      ...e,
+      name: e.subject,
+      date: e.event_date,
+      time: displayTime,
+      remarks: cleanRemarks,
+      raw_remarks: e.remarks,
+      isActive: e.is_active && (!e.activated_at || (new Date() - new Date(e.activated_at)) < 8 * 3600 * 1000),
+      isExpired: e.activated_at && (new Date() - new Date(e.activated_at)) >= 8 * 3600 * 1000,
+      type: e.event_type,
+      leaders: e.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || []
+    };
+  });
 };
 
 export const saveEvent = async (eventData) => {
+  // Ensure event_time is valid PostgreSQL TIME format (e.g. "09:00")
+  let cleanTime = (eventData.startTime || eventData.time || '09:00').toString().trim();
+  if (cleanTime.includes(' - ')) {
+    cleanTime = cleanTime.split(' - ')[0].trim();
+  }
+  if (cleanTime.includes(' to ')) {
+    cleanTime = cleanTime.split(' to ')[0].trim();
+  }
+  cleanTime = cleanTime.substring(0, 5);
+
+  let eventRemarks = eventData.remarks || '';
+  if (eventData.type === 'Training' && eventData.endTime) {
+    const endTag = `[END:${eventData.endTime.substring(0, 5)}]`;
+    if (!eventRemarks.includes('[END:')) {
+      eventRemarks = eventRemarks ? `${eventRemarks}\n${endTag}` : endTag;
+    } else {
+      eventRemarks = eventRemarks.replace(/\[END:[^\]]+\]/, endTag);
+    }
+  }
+
   // 1. Create the event
   const { data: event, error: eventErr } = await supabase
     .from('events')
@@ -300,11 +334,12 @@ export const saveEvent = async (eventData) => {
       subject: eventData.name,
       event_type: eventData.type,
       event_date: eventData.date,
-      event_time: eventData.time,
+      event_time: cleanTime,
       venue: eventData.venue,
       room: eventData.room,
       department: eventData.department,
       created_by: eventData.created_by,
+      remarks: eventRemarks,
       is_active: false
     }])
     .select()
@@ -349,18 +384,46 @@ export const saveEvent = async (eventData) => {
 };
 
 export const updateEventInfo = async (eventId, eventData) => {
+  let cleanTime = (eventData.startTime || eventData.time || '09:00').toString().trim();
+  if (cleanTime.includes(' - ')) {
+    cleanTime = cleanTime.split(' - ')[0].trim();
+  }
+  if (cleanTime.includes(' to ')) {
+    cleanTime = cleanTime.split(' to ')[0].trim();
+  }
+  cleanTime = cleanTime.substring(0, 5);
+
+  let eventRemarks = eventData.remarks;
+  if (eventData.type === 'Training' && eventData.endTime) {
+    const endTag = `[END:${eventData.endTime.substring(0, 5)}]`;
+    if (eventRemarks) {
+      if (!eventRemarks.includes('[END:')) {
+        eventRemarks = `${eventRemarks}\n${endTag}`;
+      } else {
+        eventRemarks = eventRemarks.replace(/\[END:[^\]]+\]/, endTag);
+      }
+    } else {
+      eventRemarks = endTag;
+    }
+  }
+
+  const updatePayload = {
+    subject: eventData.name,
+    event_type: eventData.type,
+    event_date: eventData.date,
+    event_time: cleanTime,
+    venue: eventData.venue,
+    room: eventData.room,
+    department: eventData.department
+  };
+  if (eventRemarks !== undefined) {
+    updatePayload.remarks = eventRemarks;
+  }
+
   // 1. Update the event
   const { data: event, error: eventErr } = await supabase
     .from('events')
-    .update({
-      subject: eventData.name,
-      event_type: eventData.type,
-      event_date: eventData.date,
-      event_time: eventData.time,
-      venue: eventData.venue,
-      room: eventData.room,
-      department: eventData.department
-    })
+    .update(updatePayload)
     .eq('id', eventId)
     .select()
     .maybeSingle();
@@ -424,11 +487,23 @@ export const getEvent = async (id) => {
 
   if (error || !data) return null;
 
+  let displayTime = data.event_time ? data.event_time.substring(0, 5) : '';
+  let cleanRemarks = data.remarks || '';
+  if (data.event_type === 'Training' && cleanRemarks.includes('[END:')) {
+    const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
+    if (match && match[1]) {
+      displayTime = `${displayTime} - ${match[1].trim()}`;
+      cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
+    }
+  }
+
   return {
     ...data,
     name: data.subject,
     date: data.event_date,
-    time: data.event_time,
+    time: displayTime,
+    remarks: cleanRemarks,
+    raw_remarks: data.remarks,
     isActive: data.is_active && (!data.activated_at || (new Date() - new Date(data.activated_at)) < 8 * 3600 * 1000),
     isExpired: data.activated_at && (new Date() - new Date(data.activated_at)) >= 8 * 3600 * 1000,
     type: data.event_type,
@@ -577,16 +652,24 @@ export const getTrainingAnalytics = async (filters = {}) => {
     };
   }
 
-  // Helper inside db for time parsing if not importing
-  const parseHours = (timeStr) => {
+  // Helper inside db for time parsing
+  const parseHours = (timeStr, remarks = '') => {
     if (!timeStr) return 0;
     let start = '', end = '';
     if (timeStr.includes(' - ')) {
       [start, end] = timeStr.split(' - ').map(s => s.trim());
     } else if (timeStr.includes(' to ')) {
       [start, end] = timeStr.split(' to ').map(s => s.trim());
+    } else if (remarks && typeof remarks === 'string' && remarks.includes('[END:')) {
+      const match = remarks.match(/\[END:([^\]]+)\]/);
+      if (match && match[1]) {
+        start = timeStr.substring(0, 5);
+        end = match[1].trim().substring(0, 5);
+      } else {
+        return 0;
+      }
     } else {
-      return 0; // Single time, default 0 or not measurable without end time
+      return 0; // Single time, default 0
     }
     const [sH, sM] = start.split(':').map(Number);
     const [eH, eM] = end.split(':').map(Number);
@@ -617,14 +700,20 @@ export const getTrainingAnalytics = async (filters = {}) => {
       if (eventMY !== filters.monthYear) return;
     }
 
-    const duration = parseHours(e.event_time);
+    let displayTime = e.event_time ? e.event_time.substring(0, 5) : '';
+    if (e.remarks && e.remarks.includes('[END:')) {
+      const m = e.remarks.match(/\[END:([^\]]+)\]/);
+      if (m && m[1]) displayTime = `${displayTime} - ${m[1].trim()}`;
+    }
+
+    const duration = parseHours(e.event_time, e.remarks);
     overallTotalHours += duration;
 
     const eventObj = {
       id: e.id,
       name: e.subject,
       date: e.event_date,
-      time: e.event_time,
+      time: displayTime,
       duration,
       venue: e.venue,
       room: e.room,
