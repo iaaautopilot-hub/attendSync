@@ -319,7 +319,12 @@ export const saveEvent = async (eventData) => {
   if (eventData.leaders && eventData.leaders.length > 0) {
     const assignments = [];
     for (const leaderName of eventData.leaders) {
-      const { data: leader } = await supabase.from('users').select('staff_id').eq('full_name', leaderName).single();
+      if (!leaderName || !leaderName.trim()) continue;
+      const { data: leader } = await supabase
+        .from('users')
+        .select('staff_id')
+        .ilike('full_name', leaderName.trim())
+        .maybeSingle();
       if (leader) {
         assignments.push({
           event_id: event.id,
@@ -351,7 +356,7 @@ export const updateEventInfo = async (eventId, eventData) => {
     })
     .eq('id', eventId)
     .select()
-    .single();
+    .maybeSingle();
 
   if (eventErr) {
     console.error('Error updating event:', eventErr);
@@ -367,7 +372,12 @@ export const updateEventInfo = async (eventId, eventData) => {
     if (eventData.leaders.length > 0) {
       const assignments = [];
       for (const leaderName of eventData.leaders) {
-        const { data: leader } = await supabase.from('users').select('staff_id').eq('full_name', leaderName).single();
+        if (!leaderName || !leaderName.trim()) continue;
+        const { data: leader } = await supabase
+          .from('users')
+          .select('staff_id')
+          .ilike('full_name', leaderName.trim())
+          .maybeSingle();
         if (leader) {
           assignments.push({
             event_id: eventId,
@@ -382,7 +392,7 @@ export const updateEventInfo = async (eventId, eventData) => {
     }
   }
 
-  return { ...event, name: event.subject };
+  return { ...event, name: event?.subject };
 };
 
 export const getEvent = async (id) => {
@@ -395,7 +405,7 @@ export const getEvent = async (id) => {
     .from('events')
     .select('*, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no)), users!events_created_by_fkey(full_name, staff_id)')
     .eq('id', id)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
 
@@ -428,7 +438,7 @@ export const activateEvent = async (id, signatureData, remarks = '') => {
     })
     .eq('id', id)
     .select()
-    .single();
+    .maybeSingle();
 
   if (error) {
     console.error('Error activating event:', error);
@@ -487,8 +497,7 @@ export const findUserByStaffId = async (staffId) => {
     .from('users')
     .select('*, rank(rank_name), hub(hub_name)')
     .eq('staff_id', staffId)
-    .eq('staff_id', staffId)
-    .single();
+    .maybeSingle();
 
   if (error || !data) return null;
   return {
