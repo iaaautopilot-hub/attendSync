@@ -47,9 +47,9 @@ body {
 }
 
 .container {
-  max-width: 1200px;
+  max-width: 1560px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem 2rem;
   width: 100%;
 }
 
@@ -96,8 +96,8 @@ h1, h2, h3, h4 {
   position: sticky;
   top: 0;
   z-index: 1000;
-  border-radius: 0 0 16px 16px;
-  margin: 0 1.5rem 2rem 1.5rem;
+  border-radius: 16px;
+  margin-bottom: 2rem;
 }
 
 .navbar-brand {

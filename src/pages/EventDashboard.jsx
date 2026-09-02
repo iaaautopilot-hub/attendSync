@@ -12,30 +12,36 @@ const EventDashboard = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [remarks, setRemarks] = useState('');
   const [loaOverrides, setLoaOverrides] = useState({});
+  const remarksInitialized = useRef(false);
 
   const handleLoaChange = (staffId, value) => {
     setLoaOverrides(prev => ({ ...prev, [staffId]: value }));
   };
 
-  const loadData = async () => {
+  const loadData = async (isFirstLoad = false) => {
     const activeEvent = await getEvent(eventId);
     setEvent(activeEvent);
     if (activeEvent) {
       const p = await getParticipants(activeEvent.id);
       setParticipants(p);
-      if (activeEvent.remarks) setRemarks(activeEvent.remarks);
+      if (!remarksInitialized.current || isFirstLoad) {
+        setRemarks(activeEvent.remarks || '');
+        remarksInitialized.current = true;
+      }
     }
   };
 
   useEffect(() => {
-    loadData();
+    loadData(true);
     const fetchAdmin = async () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
     };
     fetchAdmin();
-    // Simulate real-time updates by polling every 5 seconds
-    const interval = setInterval(loadData, 5000);
+    // Simulate real-time updates by polling every 5 seconds for participants & event status
+    const interval = setInterval(() => {
+      loadData(false);
+    }, 5000);
     return () => clearInterval(interval);
   }, [eventId]);
 

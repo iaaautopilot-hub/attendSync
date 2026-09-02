@@ -134,7 +134,7 @@ const EventList = () => {
   const paginatedEvents = filteredEvents.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div style={{ padding: '1rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '16px', color: 'var(--aa-red)', boxShadow: '0 8px 16px rgba(226, 22, 41, 0.1)' }}>
@@ -153,7 +153,7 @@ const EventList = () => {
       </div>
 
       <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.75rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+        <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.85rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
           <Search size={20} style={{ color: 'var(--text-secondary)', marginRight: '1rem' }} />
           <input
             type="text"
@@ -248,19 +248,19 @@ const EventList = () => {
             <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)' }}>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600 }}>Event ID</th>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600 }}>Name</th>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600 }}>Date & Time</th>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600 }}>Location</th>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600 }}>Department</th>
-                  <th style={{ padding: '1.25rem 1.5rem', fontWeight: 600, textAlign: 'right' }}>Actions</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '220px' }}>Event ID</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, minWidth: '280px' }}>Name</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '180px' }}>Date & Time</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, minWidth: '200px', whiteSpace: 'nowrap' }}>Location</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, whiteSpace: 'nowrap', width: '170px' }}>Department</th>
+                  <th style={{ padding: '1.25rem 1.75rem', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap', width: '140px' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedEvents.map(event => (
                   <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'all 0.3s ease' }} className="user-row-hover">
-                    <td style={{ padding: '1.25rem 1.5rem' }}>
-                      <span style={{ fontSize: '0.75rem', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.6rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '1.25rem 1.75rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: '800', background: 'rgba(255,255,255,0.05)', padding: '0.35rem 0.7rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.05em', display: 'inline-block' }}>
                         { (() => {
                           const dept = (event.department || 'Flight Operation');
                           let dCode = deptCodeMap[dept];
@@ -273,29 +273,33 @@ const EventList = () => {
                         })() }
                       </span>
                     </td>
-                    <td style={{ padding: '1.25rem 1.5rem', fontWeight: 500 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
+                    <td style={{ padding: '1.25rem 1.75rem', minWidth: '280px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+                        <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ padding: '0.25rem 0.6rem', fontSize: '0.7rem', flexShrink: 0 }}>
                           {event.type}
                         </span>
-                        {event.name}
+                        <span style={{ fontWeight: 600, fontSize: '0.98rem', color: 'var(--aa-white)' }}>
+                          {event.name}
+                        </span>
                       </div>
                     </td>
-                    <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                    <td style={{ padding: '1.25rem 1.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
                       {event.date} {event.time && `• ${event.time}`}
                     </td>
-                    <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-secondary)' }}>
-                      📍 {event.venue} ({event.room})
+                    <td style={{ padding: '1.25rem 1.75rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>
+                      📍 {event.venue} {event.room && `(${event.room})`}
                     </td>
-                    <td style={{ padding: '1.25rem 1.5rem', color: 'var(--text-secondary)' }}>
-                      {event.department}
+                    <td style={{ padding: '1.25rem 1.75rem', whiteSpace: 'nowrap' }}>
+                      <span style={{ background: 'rgba(255,255,255,0.04)', padding: '0.35rem 0.75rem', borderRadius: '8px', border: '1px solid var(--border-color)', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                        {event.department}
+                      </span>
                     </td>
-                    <td style={{ padding: '1.25rem 1.5rem', textAlign: 'right' }}>
+                    <td style={{ padding: '1.25rem 1.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Link 
                           to={`/dashboard/${event.id}`} 
                           className="btn btn-outline"
-                          style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                          style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}
                         >
                           <Eye size={16} /> View
                         </Link>
@@ -303,7 +307,7 @@ const EventList = () => {
                           <button 
                             onClick={(e) => openEditModal(e, event)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.4rem', color: 'var(--text-secondary)', border: 'none' }}
+                            style={{ padding: '0.45rem', color: 'var(--text-secondary)', border: 'none' }}
                             title="Edit Event"
                           >
                             <Edit size={18} />
@@ -313,7 +317,7 @@ const EventList = () => {
                           <button 
                             onClick={(e) => handleDelete(event.id, e)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.4rem', color: '#F87171', border: 'none' }}
+                            style={{ padding: '0.45rem', color: '#F87171', border: 'none' }}
                             title="Delete Event"
                           >
                             <Trash2 size={18} />
