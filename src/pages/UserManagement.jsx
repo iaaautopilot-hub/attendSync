@@ -281,89 +281,181 @@ const UserManagement = () => {
       {isModalOpen && (
         <div style={{
           position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
           display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-          padding: '1rem'
+          padding: '1.5rem'
         }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem' }}>
+          <div className="glass-card" style={{ width: '100%', maxWidth: '820px', maxHeight: '92vh', overflowY: 'auto', padding: '2.25rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1.25rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ padding: '1rem', background: editingUserId ? 'rgba(245, 158, 11, 0.15)' : 'rgba(226, 22, 41, 0.15)', borderRadius: '16px', color: editingUserId ? '#F59E0B' : 'var(--aa-red)' }}>
-                  <img src="/icon.png" alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+                <div style={{ padding: '0.85rem', background: editingUserId ? 'rgba(245, 158, 11, 0.15)' : 'rgba(226, 22, 41, 0.15)', borderRadius: '14px', color: editingUserId ? '#F59E0B' : 'var(--aa-red)' }}>
+                  <Users size={24} />
                 </div>
                 <div>
-                  <h2 style={{ fontSize: '1.5rem', marginBottom: '0.25rem' }}>{editingUserId ? 'Edit User' : 'Register Staff'}</h2>
-                  <p style={{ color: 'var(--text-secondary)' }}>{editingUserId ? 'Modify staff credentials' : 'Register new staff into the AirAsia portal'}</p>
+                  <h2 style={{ fontSize: '1.4rem', margin: 0 }}>{editingUserId ? 'Edit Staff Member' : 'Register New Staff'}</h2>
+                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {editingUserId ? 'Modify staff credentials, department access, or assigned roles' : 'Add new staff credentials to the AirAsia portal'}
+                  </p>
                 </div>
               </div>
-              <button type="button" onClick={closeModal} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
+              <button 
+                type="button" 
+                onClick={closeModal} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', fontSize: '1.75rem', cursor: 'pointer', lineHeight: 1 }}
+              >
+                &times;
+              </button>
             </div>
 
             <form onSubmit={handleSubmitUser}>
-              <div className="form-group">
-                <label>Full Name</label>
-                <input required type="text" name="name" className="form-control" value={formData.name} onChange={handleChange} placeholder="e.g. David Manager" />
-              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.75rem' }}>
+                {/* Left Column: Account Details */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', color: 'var(--aa-red)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                    Account Details
+                  </h4>
 
-              <div className="form-group">
-                <label>Staff ID</label>
-                <input required type="text" name="staffId" className="form-control" value={formData.staffId} onChange={handleChange} placeholder="e.g. 1003668" />
-                {editingUserId && <span style={{ fontSize: '0.65rem', color: 'var(--aa-red)', marginTop: '0.25rem', display: 'block' }}>NOTE: CHANGING STAFF ID WILL UPDATE ALL HISTORICAL LINKS.</span>}
-              </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem' }}>Full Name</label>
+                    <input 
+                      required 
+                      type="text" 
+                      name="name" 
+                      className="form-control" 
+                      value={formData.name} 
+                      onChange={handleChange} 
+                      placeholder="e.g. Capt. David Manager" 
+                    />
+                  </div>
 
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Email Address</label>
-                <input required type="email" name="email" className="form-control" value={formData.email} onChange={handleChange} placeholder="david@airasia.com" />
-              </div>
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem' }}>Staff ID / Username</label>
+                    <input 
+                      required 
+                      type="text" 
+                      name="staffId" 
+                      className="form-control" 
+                      value={formData.staffId} 
+                      onChange={handleChange} 
+                      placeholder="e.g. 1003668" 
+                    />
+                    {editingUserId && (
+                      <span style={{ fontSize: '0.68rem', color: '#F59E0B', marginTop: '0.35rem', display: 'block' }}>
+                        ⚠️ Changing Staff ID updates historical assignment links.
+                      </span>
+                    )}
+                  </div>
 
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>Roles</label>
-                <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
-                  {['Chairman', 'Instructor', 'Admin', 'System Administrator'].map(r => (
-                    <label key={r} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontWeight: 500 }}>
-                      <input 
-                        type="checkbox" 
-                        checked={formData.multi_roles?.includes(r)}
-                        onChange={(e) => {
-                          const currentRoles = formData.multi_roles || [];
-                          if (e.target.checked) {
-                            setFormData({ ...formData, multi_roles: [...currentRoles, r] });
-                          } else {
-                            setFormData({ ...formData, multi_roles: currentRoles.filter(role => role !== r) });
-                          }
-                        }}
-                        style={{ width: '18px', height: '18px', accentColor: 'var(--aa-red)' }}
-                      />
-                      {r}
-                    </label>
-                  ))}
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem' }}>Email Address</label>
+                    <input 
+                      required 
+                      type="email" 
+                      name="email" 
+                      className="form-control" 
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      placeholder="e.g. david@airasia.com" 
+                    />
+                  </div>
                 </div>
-                {(!formData.multi_roles || formData.multi_roles.length === 0) && <span style={{ color: 'var(--aa-red)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>Please select at least one role.</span>}
-              </div>
 
-              {formData.multi_roles?.includes('Admin') && (
-                <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <label>Admin Department View Limit</label>
-                  <select name="adminDepartment" className="form-control" value={formData.adminDepartment} onChange={handleChange}>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.name}>{dept.name}</option>
-                    ))}
-                  </select>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem', display: 'block' }}>This Admin will only see events belonging to this department.</span>
+                {/* Right Column: Roles & Access */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <h4 style={{ fontSize: '0.85rem', color: 'var(--aa-red)', textTransform: 'uppercase', letterSpacing: '0.05em', margin: 0 }}>
+                    Roles & Permissions
+                  </h4>
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem' }}>Select Assigned Roles</label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
+                      {['Chairman', 'Instructor', 'Admin', 'System Administrator'].map(r => {
+                        const isSelected = formData.multi_roles?.includes(r);
+                        return (
+                          <div
+                            key={r}
+                            onClick={() => {
+                              const currentRoles = formData.multi_roles || [];
+                              if (isSelected) {
+                                setFormData({ ...formData, multi_roles: currentRoles.filter(role => role !== r) });
+                              } else {
+                                setFormData({ ...formData, multi_roles: [...currentRoles, r] });
+                              }
+                            }}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.6rem',
+                              padding: '0.75rem 0.85rem',
+                              borderRadius: '10px',
+                              cursor: 'pointer',
+                              background: isSelected ? 'rgba(226, 22, 41, 0.15)' : 'rgba(255, 255, 255, 0.03)',
+                              border: `1.5px solid ${isSelected ? 'var(--aa-red)' : 'var(--border-color)'}`,
+                              transition: 'all 0.2s ease',
+                              userSelect: 'none'
+                            }}
+                          >
+                            <input 
+                              type="checkbox" 
+                              checked={isSelected}
+                              onChange={() => {}}
+                              style={{ width: '16px', height: '16px', accentColor: 'var(--aa-red)', pointerEvents: 'none' }}
+                            />
+                            <span style={{ fontSize: '0.82rem', fontWeight: isSelected ? 700 : 500, color: isSelected ? 'var(--aa-white)' : 'var(--text-secondary)' }}>
+                              {r}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {(!formData.multi_roles || formData.multi_roles.length === 0) && (
+                      <span style={{ color: 'var(--aa-red)', fontSize: '0.72rem', marginTop: '0.4rem', display: 'block' }}>
+                        * Please select at least one role.
+                      </span>
+                    )}
+                  </div>
+
+                  {formData.multi_roles?.includes('Admin') && (
+                    <div className="form-group" style={{ margin: 0 }}>
+                      <label style={{ fontSize: '0.8rem' }}>Admin Department View</label>
+                      <select 
+                        name="adminDepartment" 
+                        className="form-control" 
+                        value={formData.adminDepartment} 
+                        onChange={handleChange}
+                        style={{ fontSize: '0.9rem' }}
+                      >
+                        {departments.map(dept => (
+                          <option key={dept.id} value={dept.name}>{dept.name}</option>
+                        ))}
+                      </select>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: '0.3rem', display: 'block' }}>
+                        Admin will only view events within this department.
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="form-group" style={{ margin: 0 }}>
+                    <label style={{ fontSize: '0.8rem' }}>LOA Number (For Instructors/Chairmen)</label>
+                    <input 
+                      type="text" 
+                      name="loaNo" 
+                      className="form-control" 
+                      value={formData.loaNo} 
+                      onChange={handleChange} 
+                      placeholder="e.g. 5850/KAPEL/II/2026" 
+                    />
+                  </div>
                 </div>
-              )}
-
-              <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                <label>LOA Number (For Instructors/Chairmen)</label>
-                <input type="text" name="loaNo" className="form-control" value={formData.loaNo} onChange={handleChange} placeholder="e.g. 5850/KAPEL/II/2026" />
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem', gridColumn: '1 / -1' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
-                  <Shield size={20} />
-                  {editingUserId ? 'Update User' : 'Register User'}
+              {/* Bottom Action Buttons */}
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1.5, padding: '0.85rem', fontSize: '1rem' }}>
+                  <Shield size={18} />
+                  {editingUserId ? 'Save Changes' : 'Register Staff Member'}
                 </button>
-                <button type="button" onClick={closeModal} className="btn btn-outline" style={{ flex: 1 }}>
+                <button type="button" onClick={closeModal} className="btn btn-outline" style={{ flex: 1, padding: '0.85rem' }}>
                   Cancel
                 </button>
               </div>
