@@ -320,21 +320,28 @@ export const saveEvent = async (eventData) => {
     const assignments = [];
     for (const leaderName of eventData.leaders) {
       if (!leaderName || !leaderName.trim()) continue;
-      const { data: leader } = await supabase
+      const trimmed = leaderName.trim();
+      const { data: users, error: uErr } = await supabase
         .from('users')
         .select('staff_id')
-        .ilike('full_name', leaderName.trim())
-        .maybeSingle();
+        .or(`staff_id.eq."${trimmed}",full_name.ilike."${trimmed}"`)
+        .limit(1);
+
+      if (uErr) console.error('Error finding leader in saveEvent:', trimmed, uErr);
+      const leader = users && users.length > 0 ? users[0] : null;
       if (leader) {
         assignments.push({
           event_id: event.id,
           user_id: leader.staff_id,
           assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
         });
+      } else {
+        console.warn('Leader not found for assignment:', trimmed);
       }
     }
     if (assignments.length > 0) {
-      await supabase.from('event_assignments').insert(assignments);
+      const { error: insErr } = await supabase.from('event_assignments').insert(assignments);
+      if (insErr) console.error('Error inserting event_assignments in saveEvent:', insErr);
     }
   }
 
@@ -366,28 +373,36 @@ export const updateEventInfo = async (eventId, eventData) => {
   // 2. Re-assign leaders
   if (eventData.leaders) {
     // Delete existing
-    await supabase.from('event_assignments').delete().eq('event_id', eventId);
+    const { error: delErr } = await supabase.from('event_assignments').delete().eq('event_id', eventId);
+    if (delErr) console.error('Error deleting previous event_assignments:', delErr);
 
     // Insert new
     if (eventData.leaders.length > 0) {
       const assignments = [];
       for (const leaderName of eventData.leaders) {
         if (!leaderName || !leaderName.trim()) continue;
-        const { data: leader } = await supabase
+        const trimmed = leaderName.trim();
+        const { data: users, error: uErr } = await supabase
           .from('users')
           .select('staff_id')
-          .ilike('full_name', leaderName.trim())
-          .maybeSingle();
+          .or(`staff_id.eq."${trimmed}",full_name.ilike."${trimmed}"`)
+          .limit(1);
+
+        if (uErr) console.error('Error finding leader in updateEventInfo:', trimmed, uErr);
+        const leader = users && users.length > 0 ? users[0] : null;
         if (leader) {
           assignments.push({
             event_id: eventId,
             user_id: leader.staff_id,
             assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
           });
+        } else {
+          console.warn('Leader not found for assignment in updateEventInfo:', trimmed);
         }
       }
       if (assignments.length > 0) {
-        await supabase.from('event_assignments').insert(assignments);
+        const { error: insErr } = await supabase.from('event_assignments').insert(assignments);
+        if (insErr) console.error('Error inserting new event_assignments:', insErr);
       }
     }
   }

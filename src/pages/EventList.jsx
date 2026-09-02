@@ -96,7 +96,7 @@ const EventList = () => {
       leaders: actualLeaders
     });
     setEditingEvent(null);
-    loadEvents();
+    await loadEvents();
   };
 
   const handleLeaderChange = (index, value) => {
