@@ -71,31 +71,33 @@ const ManageDepartments = () => {
   };
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '1rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '16px', color: 'var(--aa-red)' }}>
-            <Settings size={28} />
+    <div className="animate-fade-in" style={{ maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{ padding: '0.85rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '14px', color: 'var(--aa-red)' }}>
+            <Settings size={26} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.75rem', margin: 0 }}>Manage Departments</h2>
-            <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>Configure dynamic departments for the organization</p>
+            <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Manage Departments</h2>
+            <p style={{ color: 'var(--text-secondary)', margin: '0.2rem 0 0 0', fontSize: '0.85rem' }}>Configure dynamic departments for the organization</p>
           </div>
         </div>
-        <button onClick={handleOpenAdd} className="btn btn-primary" style={{ padding: '0.75rem 1.5rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <Plus size={20} />
+        <button onClick={handleOpenAdd} className="btn btn-primary" style={{ padding: '0.65rem 1.25rem', display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <Plus size={18} />
           Add Department
         </button>
       </div>
 
-      <div className="glass-card" style={{ padding: '0' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+      {/* Table Card */}
+      <div className="glass-card" style={{ padding: '0', overflow: 'hidden' }}>
+        <div className="table-container">
+          <table style={{ minWidth: '500px' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-                <th style={{ padding: '1.25rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Department Name</th>
-                <th style={{ padding: '1.25rem', fontWeight: 600, color: 'var(--text-secondary)' }}>Abbreviation Code</th>
-                <th style={{ padding: '1.25rem', fontWeight: 600, color: 'var(--text-secondary)', textAlign: 'right' }}>Actions</th>
+              <tr>
+                <th>Department Name</th>
+                <th>Abbreviation Code</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -106,35 +108,33 @@ const ManageDepartments = () => {
               ) : departments.length === 0 ? (
                 <tr>
                   <td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                    No departments found. Please ensure the 'departments' table has RLS policies allowing SELECT, or disable RLS.
+                    No departments found.
                   </td>
                 </tr>
               ) : (
                 departments.map(dept => (
-                  <tr key={dept.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                    <td style={{ padding: '1.25rem' }}>
-                      <div style={{ fontWeight: 500 }}>{dept.name}</div>
-                    </td>
-                    <td style={{ padding: '1.25rem' }}>
+                  <tr key={dept.id}>
+                    <td style={{ fontWeight: 600, color: 'var(--aa-white)' }}>{dept.name}</td>
+                    <td>
                       <span className="badge badge-blue">{dept.code}</span>
                     </td>
-                    <td style={{ padding: '1.25rem', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end' }}>
                         <button 
                           onClick={() => handleOpenEdit(dept)}
                           className="btn btn-outline" 
-                          style={{ padding: '0.5rem', border: 'none' }}
+                          style={{ padding: '0.35rem 0.5rem', border: 'none', minHeight: '34px' }}
                           title="Edit"
                         >
-                          <Edit2 size={18} />
+                          <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => handleDelete(dept.id)}
                           className="btn btn-outline" 
-                          style={{ padding: '0.5rem', color: '#F87171', border: 'none' }}
+                          style={{ padding: '0.35rem 0.5rem', color: '#F87171', border: 'none', minHeight: '34px' }}
                           title="Delete"
                         >
-                          <Trash2 size={18} />
+                          <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
@@ -146,18 +146,20 @@ const ManageDepartments = () => {
         </div>
       </div>
 
+      {/* Add / Edit Modal */}
       {isModalOpen && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)',
           display: 'flex', justifyContent: 'center', alignItems: 'center',
-          zIndex: 1000, padding: '1rem'
+          zIndex: 1000, padding: '1rem',
+          overflowY: 'auto'
         }}>
-          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>{isEditing ? 'Edit Department' : 'Add New Department'}</h2>
-              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
-                <X size={24} />
+          <div className="glass-card animate-fade-in" style={{ width: '100%', maxWidth: '500px', padding: '1.75rem', margin: 'auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.35rem' }}>{isEditing ? 'Edit Department' : 'Add New Department'}</h2>
+              <button onClick={() => setIsModalOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}>
+                <X size={22} />
               </button>
             </div>
 
@@ -187,17 +189,17 @@ const ManageDepartments = () => {
                   placeholder="e.g. HR" 
                   maxLength={10}
                 />
-                <small style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', display: 'block' }}>
+                <small style={{ color: 'var(--text-secondary)', marginTop: '0.4rem', display: 'block', fontSize: '0.75rem' }}>
                   Used to generate Event IDs (e.g. IAA/HR/MTG/2026/00001)
                 </small>
               </div>
 
-              <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline" style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => setIsModalOpen(false)} className="btn btn-outline" style={{ flex: 1, minWidth: '100px' }}>
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 2, display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
-                  <Save size={20} />
+                <button type="submit" className="btn btn-primary" style={{ flex: 1.5, minWidth: '140px', display: 'flex', gap: '0.5rem', justifyContent: 'center' }}>
+                  <Save size={18} />
                   {isEditing ? 'Save Changes' : 'Create Department'}
                 </button>
               </div>

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock } from 'lucide-react';
+import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock, Plus } from 'lucide-react';
 import { parseEventTime, calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
 import { canAdminAccessDepartment, getAllowedDepartmentsForUser, canUserViewOrEditEvent, isFlightOperationIntegrated } from '../utils/departmentUtils';
 
@@ -148,62 +148,65 @@ const EventList = () => {
 
   return (
     <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2.5rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-          <div style={{ padding: '1rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '16px', color: 'var(--aa-red)', boxShadow: '0 8px 16px rgba(226, 22, 41, 0.1)' }}>
-            <img src="/icon.png" alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+      {/* Header Banner */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.75rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <div style={{ padding: '0.85rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '14px', color: 'var(--aa-red)', boxShadow: '0 6px 14px rgba(226, 22, 41, 0.1)' }}>
+            <img src="/icon.png" alt="Logo" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>{user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) ? 'System Events' : 'My Assigned Events'}</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>Manage and view attendance records for your flight or training</p>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.2rem' }}>
+              {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) ? 'System Events' : 'My Assigned Events'}
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Manage and view attendance records for your flights and training</p>
           </div>
         </div>
         {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
-          <Link to="/" className="btn btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
-            + New Event
+          <Link to="/" className="btn btn-primary" style={{ padding: '0.65rem 1.25rem' }}>
+            <Plus size={18} /> New Event
           </Link>
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div className="glass-card" style={{ flex: 1, display: 'flex', alignItems: 'center', padding: '0.85rem 1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-          <Search size={20} style={{ color: 'var(--text-secondary)', marginRight: '1rem' }} />
+      {/* Search Input */}
+      <div style={{ marginBottom: '1.25rem' }}>
+        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 1.25rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+          <Search size={18} style={{ color: 'var(--text-secondary)', marginRight: '0.75rem', flexShrink: 0 }} />
           <input
             type="text"
             placeholder="Search event name..."
             value={searchKeyword}
             onChange={(e) => setSearchKeyword(e.target.value)}
-            style={{ flex: 1, background: 'transparent', border: 'none', color: '#fff', fontSize: '1rem', outline: 'none' }}
+            style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', outline: 'none' }}
           />
         </div>
       </div>
 
+      {/* Department Filter Chips */}
       {availableDepartments.length > 0 && events.length > 0 && (
-        <div className="glass-card" style={{ padding: '1.25rem 1.75rem', marginBottom: '2rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', background: 'rgba(255, 255, 255, 0.02)', border: '1px solid var(--border-color)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ padding: '0.6rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '12px', color: 'var(--aa-red)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Filter size={20} />
+        <div className="glass-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <Filter size={16} style={{ color: 'var(--aa-red)' }} />
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--aa-white)' }}>Department Filter</span>
             </div>
-            <div>
-              <span style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--aa-white)', display: 'block' }}>Department Filter</span>
-              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Showing {filteredEvents.length} of {events.length} total events</span>
-            </div>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Showing {filteredEvents.length} of {events.length} events
+            </span>
           </div>
 
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="filter-chips-container">
             <button
               onClick={() => setSelectedDepartment('ALL')}
-              className={`btn ${selectedDepartment === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+              className={`btn filter-chip ${selectedDepartment === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
               style={{
-                padding: '0.45rem 1rem',
-                fontSize: '0.85rem',
+                padding: '0.4rem 0.9rem',
+                fontSize: '0.8rem',
+                minHeight: '36px',
                 borderRadius: '50px',
                 background: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'transparent',
                 borderColor: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'var(--border-color)',
-                color: selectedDepartment === 'ALL' ? '#fff' : 'var(--text-secondary)',
-                transition: 'all 0.2s ease',
-                fontWeight: selectedDepartment === 'ALL' ? '700' : '500',
-                boxShadow: selectedDepartment === 'ALL' ? '0 4px 12px rgba(226, 22, 41, 0.3)' : 'none'
+                color: selectedDepartment === 'ALL' ? '#fff' : 'var(--text-secondary)'
               }}
             >
               All ({events.length})
@@ -215,17 +218,15 @@ const EventList = () => {
                 <button
                   key={deptName}
                   onClick={() => setSelectedDepartment(deptName)}
-                  className={`btn ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                  className={`btn filter-chip ${isSelected ? 'btn-primary' : 'btn-outline'}`}
                   style={{
-                    padding: '0.45rem 1rem',
-                    fontSize: '0.85rem',
+                    padding: '0.4rem 0.9rem',
+                    fontSize: '0.8rem',
+                    minHeight: '36px',
                     borderRadius: '50px',
                     background: isSelected ? 'var(--aa-red)' : 'transparent',
                     borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
-                    color: isSelected ? '#fff' : 'var(--text-secondary)',
-                    transition: 'all 0.2s ease',
-                    fontWeight: isSelected ? '700' : '500',
-                    boxShadow: isSelected ? '0 4px 12px rgba(226, 22, 41, 0.3)' : 'none'
+                    color: isSelected ? '#fff' : 'var(--text-secondary)'
                   }}
                 >
                   {deptName} ({count})
@@ -236,9 +237,10 @@ const EventList = () => {
         </div>
       )}
 
+      {/* Events Table / Empty State */}
       {filteredEvents.length === 0 ? (
         <div className="empty-state">
-          <img src="/icon.png" alt="Logo" style={{ width: '48px', height: '48px', objectFit: 'contain', marginBottom: '1.5rem', opacity: 0.6 }} />
+          <img src="/icon.png" alt="Logo" style={{ width: '44px', height: '44px', objectFit: 'contain', marginBottom: '1rem', opacity: 0.6 }} />
           <h2>No Events Found</h2>
           {selectedDepartment !== 'ALL' ? (
             <>
@@ -257,22 +259,22 @@ const EventList = () => {
         </div>
       ) : (
         <div className="glass-card" style={{ padding: 0, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+          <div className="table-container">
+            <table style={{ minWidth: '680px' }}>
               <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.02)', fontSize: '0.8rem' }}>
-                  <th style={{ padding: '1rem 0.85rem 1rem 1.25rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Event ID</th>
-                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600 }}>Name</th>
-                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Date & Time</th>
-                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600 }}>Location</th>
-                  <th style={{ padding: '1rem 0.85rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Department</th>
-                  <th style={{ padding: '1rem 1.25rem 1rem 0.85rem', fontWeight: 600, textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
+                <tr>
+                  <th style={{ whiteSpace: 'nowrap' }}>Event ID</th>
+                  <th>Name</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Date & Time</th>
+                  <th>Location</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Department</th>
+                  <th style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedEvents.map(event => (
-                  <tr key={event.id} style={{ borderBottom: '1px solid var(--border-color)', transition: 'all 0.3s ease' }} className="user-row-hover">
-                    <td style={{ padding: '0.9rem 0.85rem 0.9rem 1.25rem', whiteSpace: 'nowrap' }}>
+                  <tr key={event.id}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.5rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.04em', display: 'inline-block' }}>
                         { (() => {
                           const dept = (event.department || 'Flight Operation');
@@ -287,54 +289,54 @@ const EventList = () => {
                         })() }
                       </span>
                     </td>
-                    <td style={{ padding: '0.9rem 0.85rem' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                         <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ padding: '0.2rem 0.45rem', fontSize: '0.65rem', flexShrink: 0 }}>
                           {event.type}
                         </span>
-                        <span style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--aa-white)', wordBreak: 'break-word' }}>
+                        <span style={{ fontWeight: 600, fontSize: '0.9rem', color: 'var(--aa-white)', wordBreak: 'break-word' }}>
                           {event.name}
                         </span>
                       </div>
                     </td>
-                    <td style={{ padding: '0.9rem 0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.85rem' }}>
+                    <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
                       {event.date} {event.time && `• ${event.time}`}
                     </td>
-                    <td style={{ padding: '0.9rem 0.85rem', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                       📍 {event.venue} {event.room && `(${event.room})`}
                     </td>
-                    <td style={{ padding: '0.9rem 0.85rem', whiteSpace: 'nowrap' }}>
-                      <span style={{ background: 'rgba(255,255,255,0.04)', padding: '0.25rem 0.55rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <span style={{ background: 'rgba(255,255,255,0.04)', padding: '0.25rem 0.55rem', borderRadius: '6px', border: '1px solid var(--border-color)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
                         {event.department}
                       </span>
                     </td>
-                    <td style={{ padding: '0.9rem 1.25rem 0.9rem 0.85rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', justifyContent: 'flex-end', alignItems: 'center' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'flex-end', alignItems: 'center' }}>
                         <Link 
                           to={`/dashboard/${event.id}`} 
                           className="btn btn-outline"
-                          style={{ padding: '0.35rem 0.7rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', minHeight: '34px' }}
                         >
-                          <Eye size={15} /> View
+                          <Eye size={14} /> View
                         </Link>
                         {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
                           <button 
                             onClick={(e) => openEditModal(e, event)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.35rem 0.5rem', color: 'var(--text-secondary)', border: 'none' }}
+                            style={{ padding: '0.35rem 0.5rem', color: 'var(--text-secondary)', border: 'none', minHeight: '34px' }}
                             title="Edit Event"
                           >
-                            <Edit size={16} />
+                            <Edit size={15} />
                           </button>
                         )}
                         {user?.multi_roles?.some(r => r.toLowerCase() === 'system administrator') && (
                           <button 
                             onClick={(e) => handleDelete(event.id, e)} 
                             className="btn btn-outline" 
-                            style={{ padding: '0.35rem 0.5rem', color: '#F87171', border: 'none' }}
+                            style={{ padding: '0.35rem 0.5rem', color: '#F87171', border: 'none', minHeight: '34px' }}
                             title="Delete Event"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         )}
                       </div>
@@ -346,23 +348,23 @@ const EventList = () => {
           </div>
           
           {totalPages > 1 && (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', padding: '1.5rem', borderTop: '1px solid var(--border-color)' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', padding: '1.25rem', borderTop: '1px solid var(--border-color)', flexWrap: 'wrap' }}>
               <button 
                 className="btn btn-outline" 
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                style={{ padding: '0.5rem 1rem' }}
+                style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
               >
                 Previous
               </button>
-              <span style={{ color: 'var(--text-secondary)' }}>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                 Page {currentPage} of {totalPages}
               </span>
               <button 
                 className="btn btn-outline" 
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                style={{ padding: '0.5rem 1rem' }}
+                style={{ padding: '0.45rem 0.9rem', fontSize: '0.85rem' }}
               >
                 Next
               </button>
@@ -371,18 +373,23 @@ const EventList = () => {
         </div>
       )}
 
+      {/* Edit Event Modal */}
       {editingEvent && (
         <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)',
+          position: 'fixed', inset: 0,
+          background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
           display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 1000,
-          padding: '1rem'
+          padding: '1rem',
+          overflowY: 'auto'
         }}>
-          <div className="glass-card" style={{ width: '100%', maxWidth: '700px', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: '1.5rem', margin: 0 }}>Edit Event</h2>
-              <button onClick={() => setEditingEvent(null)} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer' }}>
-                <X size={24} />
+          <div className="glass-card" style={{ width: '100%', maxWidth: '680px', maxHeight: '90vh', overflowY: 'auto', padding: '1.75rem', margin: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '0.75rem', borderBottom: '1px solid var(--border-color)' }}>
+              <h2 style={{ fontSize: '1.35rem', margin: 0 }}>Edit Event</h2>
+              <button 
+                onClick={() => setEditingEvent(null)} 
+                style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', borderRadius: '8px', color: '#fff', padding: '0.35rem', cursor: 'pointer', display: 'flex' }}
+              >
+                <X size={20} />
               </button>
             </div>
             
@@ -425,15 +432,15 @@ const EventList = () => {
 
               {editFormData.type === 'Training' ? (
                 <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                     <label style={{ margin: 0 }}>Training Session Hours</label>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
-                      ⏱️ Duration: {formatDurationDisplay(calculateDurationHours(editFormData.startTime, editFormData.endTime))} ({calculateDurationHours(editFormData.startTime, editFormData.endTime)} hrs)
+                    <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
+                      ⏱️ Duration: {formatDurationDisplay(calculateDurationHours(editFormData.startTime, editFormData.endTime))}
                     </span>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>Start Time</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Start Time</span>
                       <input 
                         required 
                         type="time" 
@@ -443,7 +450,7 @@ const EventList = () => {
                       />
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>End Time</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>End Time</span>
                       <input 
                         required 
                         type="time" 
@@ -471,21 +478,21 @@ const EventList = () => {
                 <input required type="text" className="form-control" value={editFormData.room} onChange={(e) => setEditFormData({...editFormData, room: e.target.value})} />
               </div>
 
-              <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '1.5rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', marginTop: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                    <Users size={20} style={{ color: 'var(--aa-red)' }} />
-                    <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Assign {editFormData.type === 'Training' ? 'Instructor' : 'Chairman'}</h3>
+              <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', marginTop: '0.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Users size={18} style={{ color: 'var(--aa-red)' }} />
+                    <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Assign {editFormData.type === 'Training' ? 'Instructor' : 'Chairman'}</h3>
                   </div>
                   {editFormData.leaders.length < 3 && (
-                    <button type="button" onClick={addLeader} className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                    <button type="button" onClick={addLeader} className="btn btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', minHeight: '32px' }}>
                       + Add
                     </button>
                   )}
                 </div>
 
                 {editFormData.leaders.map((leader, index) => (
-                  <div key={index} style={{ display: 'flex', gap: '1rem', marginBottom: index !== editFormData.leaders.length - 1 ? '1rem' : '0' }}>
+                  <div key={index} style={{ display: 'flex', gap: '0.75rem', marginBottom: index !== editFormData.leaders.length - 1 ? '0.75rem' : '0' }}>
                     <div className="form-group" style={{ margin: 0, flex: 1 }}>
                       <select
                         required
@@ -502,7 +509,7 @@ const EventList = () => {
                       </select>
                     </div>
                     {editFormData.leaders.length > 1 && (
-                      <button type="button" onClick={() => removeLeader(index)} className="btn btn-outline" style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}>
+                      <button type="button" onClick={() => removeLeader(index)} className="btn btn-outline" style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)', padding: '0.5rem' }}>
                         Remove
                       </button>
                     )}
@@ -510,11 +517,11 @@ const EventList = () => {
                 ))}
               </div>
 
-              <div style={{ gridColumn: '1 / -1', marginTop: '1.5rem', display: 'flex', gap: '1rem' }}>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+              <div style={{ gridColumn: '1 / -1', marginTop: '1rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1, minWidth: '140px' }}>
                   Save Changes
                 </button>
-                <button type="button" onClick={() => setEditingEvent(null)} className="btn btn-outline" style={{ flex: 1 }}>
+                <button type="button" onClick={() => setEditingEvent(null)} className="btn btn-outline" style={{ flex: 1, minWidth: '140px' }}>
                   Cancel
                 </button>
               </div>

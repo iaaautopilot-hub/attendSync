@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { getEvent, getParticipants, activateEvent, getCurrentUser, updateEventRemarks } from '../db';
 import QRCode from 'qrcode';
-import { FileDown, Calendar, MapPin, Users, RefreshCw, ShieldCheck, ExternalLink, CheckCircle } from 'lucide-react';
+import { FileDown, Calendar, MapPin, Users, RefreshCw, ShieldCheck, ExternalLink, CheckCircle, Save } from 'lucide-react';
 import { exportAttendancePDF } from '../utils/pdfExport';
 
 const EventDashboard = () => {
@@ -99,10 +99,10 @@ const EventDashboard = () => {
   if (!event) {
     return (
       <div className="empty-state animate-fade-in">
-        <Calendar size={48} />
+        <Calendar size={44} />
         <h2>No Active Event</h2>
         <p>There is currently no event ongoing. Please create one first.</p>
-        <button onClick={() => window.location.href = '/'} className="btn btn-primary" style={{ marginTop: '1.5rem' }}>
+        <button onClick={() => window.location.href = '/'} className="btn btn-primary" style={{ marginTop: '1.25rem' }}>
           Create Event
         </button>
       </div>
@@ -110,114 +110,118 @@ const EventDashboard = () => {
   }
 
   const leaderLabel = event.type === 'Training' ? 'Instructors' : 'Chairmen';
-
   const isAssignedLeader = event?.leaders?.includes(currentUser?.name) || event?.leaders?.includes(currentUser?.full_name);
   const isSystemAdmin = currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
   const canActivate = isSystemAdmin || isAssignedLeader;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
       <div className="grid grid-cols-2">
+        {/* Event Details Card */}
         <div className="glass-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-            <div>
-              <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ marginBottom: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ flex: '1 1 240px' }}>
+              <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ marginBottom: '1rem' }}>
                 {event.type}
               </span>
-              <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{event.name}</h2>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', color: 'var(--text-secondary)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <img src="/icon.png" alt="Icon" style={{ width: '18px', height: '18px', objectFit: 'contain' }} /> <span>{event.date} {event.time && `• ${event.time}`}</span>
+              <h2 style={{ fontSize: '1.6rem', marginBottom: '0.85rem', wordBreak: 'break-word' }}>{event.name}</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span>📅</span> <span>{event.date} {event.time && `• ${event.time}`}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <img src="/icon.png" alt="Icon" style={{ width: '18px', height: '18px', objectFit: 'contain' }} /> <span>{event.venue} - {event.room}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span>📍</span> <span>{event.venue} - {event.room}</span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <img src="/icon.png" alt="Icon" style={{ width: '18px', height: '18px', objectFit: 'contain' }} /> <span>Dept: {event.department}</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                  <span>🏢</span> <span>Dept: {event.department}</span>
                 </div>
               </div>
             </div>
-            <div style={{ textAlign: 'right', background: 'rgba(255,255,255,0.03)', padding: '1rem', borderRadius: '12px' }}>
-              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assigned {leaderLabel}</p>
+            
+            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid var(--border-color)', minWidth: '140px' }}>
+              <p style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: '0.4rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Assigned {leaderLabel}</p>
               {(event.leaders || []).map((leader, i) => (
-                <div key={i} style={{ fontWeight: '700', color: 'var(--aa-white)', marginBottom: '0.25rem' }}>{leader}</div>
+                <div key={i} style={{ fontWeight: '700', color: 'var(--aa-white)', fontSize: '0.88rem', marginBottom: '0.2rem' }}>{leader}</div>
               ))}
             </div>
           </div>
         </div>
 
+        {/* Activation & Session Card */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           {!event.isActive ? (
             canActivate ? (
-              <>
-                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Activation Required</h3>
-                <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.5rem', marginBottom: '1.5rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--aa-green)', marginBottom: '0.5rem' }}>
-                    <ShieldCheck size={24} />
-                    <strong style={{ fontSize: '1.1rem' }}>Chairperson Digital Verification</strong>
+              <div style={{ width: '100%' }}>
+                <h3 style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>Activation Required</h3>
+                <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.25rem', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: 'var(--accent-success)', marginBottom: '0.35rem' }}>
+                    <ShieldCheck size={22} />
+                    <strong style={{ fontSize: '1rem' }}>Chairperson Digital Verification</strong>
                   </div>
-                  <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
-                    A unique, encrypted QR verification code will be generated as your official digital signature for this report.
+                  <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    A unique, encrypted QR signature will be generated as your official verification for this session.
                   </p>
                 </div>
   
-                <div style={{ width: '100%', marginBottom: '1.5rem', textAlign: 'left' }}>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
+                <div style={{ width: '100%', marginBottom: '1.25rem', textAlign: 'left' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
                   <textarea 
                     className="form-control" 
-                    style={{ minHeight: '100px', resize: 'none' }} 
+                    style={{ minHeight: '90px', resize: 'none' }} 
                     placeholder="Enter any official remarks, observations, or conclusions here..."
                     value={remarks}
                     onChange={(e) => setRemarks(e.target.value)}
                   ></textarea>
                 </div>
-                <button onClick={handleActivate} className="btn btn-primary" style={{ width: '100%', padding: '1rem', fontSize: '1.1rem' }}>
+                <button onClick={handleActivate} className="btn btn-primary" style={{ width: '100%', padding: '0.95rem', fontSize: '1.05rem' }}>
                   Verify & Activate Event
                 </button>
-              </>
+              </div>
             ) : (
-              <div className="empty-state" style={{ padding: '3rem 1.5rem' }}>
-                <ShieldCheck size={48} style={{ color: 'var(--text-secondary)', marginBottom: '1rem', opacity: 0.5 }} />
-                <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Pending Activation</h3>
-                <p style={{ color: 'var(--text-secondary)' }}>
+              <div className="empty-state" style={{ padding: '2rem 1rem' }}>
+                <ShieldCheck size={40} style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', opacity: 0.5 }} />
+                <h3 style={{ fontSize: '1.25rem', marginBottom: '0.4rem' }}>Pending Activation</h3>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   This event is waiting for the assigned {leaderLabel.toLowerCase()} to digitally verify and activate it.
                 </p>
               </div>
             )
           ) : (
-            <>
-              <div style={{ padding: '1.5rem', background: 'rgba(226, 22, 41, 0.1)', borderRadius: '50%', color: 'var(--aa-red)', marginBottom: '1.5rem' }}>
-                <CheckCircle size={48} />
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+              <div style={{ padding: '1rem', background: 'rgba(226, 22, 41, 0.1)', borderRadius: '50%', color: 'var(--aa-red)', marginBottom: '1rem' }}>
+                <CheckCircle size={38} />
               </div>
-              <h3 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>Event Active</h3>
+              <h3 style={{ fontSize: '1.35rem', marginBottom: '0.75rem' }}>Event Active</h3>
               
-              <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', width: '100%', textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+              {/* Remarks Box */}
+              <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', width: '100%', textAlign: 'left' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                   <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--aa-red)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Official Remarks</p>
                   <button 
                     onClick={handleUpdateRemarks}
-                    style={{ background: 'none', border: 'none', color: 'var(--aa-green)', fontSize: '0.7rem', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                    style={{ background: 'none', border: 'none', color: 'var(--accent-success)', fontSize: '0.72rem', fontWeight: '700', cursor: 'pointer', padding: '0.2rem 0.4rem', display: 'flex', alignItems: 'center', gap: '4px' }}
                   >
-                    SAVE CHANGES
+                    <Save size={12} /> SAVE CHANGES
                   </button>
                 </div>
                 <textarea 
                   className="form-control" 
-                  style={{ minHeight: '80px', background: 'transparent', border: 'none', padding: 0, color: 'var(--text-primary)', fontSize: '0.95rem', resize: 'none' }} 
+                  style={{ minHeight: '70px', background: 'transparent', border: 'none', padding: 0, color: 'var(--text-primary)', fontSize: '0.9rem', resize: 'none' }} 
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
                   placeholder="Update meeting observations or conclusions..."
                 ></textarea>
               </div>
 
+              {/* LOA Overrides if present */}
               {event.leaderDetails && event.leaderDetails.length > 0 && (
-                <div style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.03)', borderRadius: '16px', border: '1px solid var(--border-color)', marginBottom: '1.5rem', width: '100%', textAlign: 'left' }}>
-                  <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--aa-red)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', width: '100%', textAlign: 'left' }}>
+                  <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--aa-red)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.6rem' }}>
                     {event.type === 'Training' ? 'Instructor' : 'Chairperson'} LOA Details
                   </p>
                   {event.leaderDetails.map(ld => (
-                    <div key={ld.staff_id} style={{ display: 'flex', flexDirection: 'column', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '1rem' }}>
-                      <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>
+                    <div key={ld.staff_id} style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.75rem' }}>
+                      <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem' }}>
                         {ld.name} ({ld.staff_id})
                       </label>
                       <input 
@@ -226,97 +230,100 @@ const EventDashboard = () => {
                         placeholder={`Default LOA: ${ld.loa_no || 'None'}`}
                         value={loaOverrides[ld.staff_id] || ''}
                         onChange={(e) => handleLoaChange(ld.staff_id, e.target.value)}
-                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--aa-white)', padding: '0.75rem', borderRadius: '8px' }}
+                        style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--aa-white)', padding: '0.6rem 0.85rem', borderRadius: '8px', minHeight: '40px', fontSize: '0.88rem' }}
                       />
                     </div>
                   ))}
-                  <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                    * Leave blank to use the default LOA number from User Management. Overrides here apply to the PDF export.
+                  <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                    * Overrides apply to the PDF export.
                   </p>
                 </div>
               )}
 
-              <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '350px' }}>
-                Attendance is now being recorded. Display the QR code on a large screen for participants.
+              <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem', maxWidth: '350px', fontSize: '0.88rem' }}>
+                Attendance is active. Open screen presentation for attendee scanning.
               </p>
               <button 
                 onClick={() => window.open(`/qr/${event.id}`, '_blank')} 
                 className="btn btn-primary" 
-                style={{ fontSize: '1.2rem', padding: '1.25rem 2.5rem', gap: '1rem', borderRadius: '16px' }}
+                style={{ fontSize: '1.05rem', padding: '1rem 1.5rem', width: '100%', borderRadius: '14px', display: 'flex', justifyContent: 'center' }}
               >
-                <ExternalLink size={24} /> Screen Presentation QR
+                <ExternalLink size={20} /> Screen Presentation QR
               </button>
-            </>
+            </div>
           )}
         </div>
       </div>
 
-      <div className="glass-card" style={{ marginTop: '1.5rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <h3 style={{ margin: 0 }}>Attendance List</h3>
+      {/* Attendance List Table Card */}
+      <div className="glass-card" style={{ marginTop: '1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.25rem' }}>Attendance List</h3>
             <span className="badge badge-blue">{participants.length} Scanned</span>
           </div>
-          <div style={{ display: 'flex', gap: '1rem' }}>
-            <button onClick={loadData} className="btn btn-outline" title="Refresh Data">
-              <RefreshCw size={18} />
+          <div style={{ display: 'flex', gap: '0.6rem' }}>
+            <button onClick={loadData} className="btn btn-outline" style={{ padding: '0.55rem 0.85rem' }} title="Refresh Data">
+              <RefreshCw size={16} />
             </button>
-            <button onClick={handleGenerateSoftCopy} disabled={participants.length === 0} className="btn btn-success">
-              <FileDown size={18} />
+            <button onClick={handleGenerateSoftCopy} disabled={participants.length === 0} className="btn btn-success" style={{ padding: '0.55rem 1rem' }}>
+              <FileDown size={16} />
               Export PDF
             </button>
           </div>
         </div>
 
-        {/* This div is wrapped for both display and PDF generation */}
-        <div style={{ background: '#ffffff', borderRadius: '8px', padding: '1rem', color: '#111827', overflow: 'hidden' }}>
-          {participants.length > 0 ? (
-            <table style={{ width: '100%', color: '#111827' }}>
-              <thead>
-                <tr>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>No</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Name</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Staff ID</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Rank</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>HUB</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Lic/Fac No.</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Timestamp</th>
-                  <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB' }}>Signature</th>
-                </tr>
-              </thead>
-              <tbody>
-                {participants.map((p, i) => (
-                  <tr key={i}>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{i + 1}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.name}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.staffId}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.rank}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.hub}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>{p.license}</td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB' }}>
-                      {p.scannedAt ? (
-                        (() => {
-                          const d = new Date(p.scannedAt);
-                          const day = String(d.getDate()).padStart(2, '0');
-                          const month = String(d.getMonth() + 1).padStart(2, '0');
-                          const hours = String(d.getHours()).padStart(2, '0');
-                          const mins = String(d.getMinutes()).padStart(2, '0');
-                          return `${day}/${month} ${hours}:${mins}`;
-                        })()
-                      ) : '-'}
-                    </td>
-                    <td style={{ borderBottom: '1px solid #E5E7EB', padding: '0.25rem 1rem' }}>
-                      {p.signature && <img src={p.signature} alt="Signature" style={{ height: '40px', maxWidth: '100px' }} />}
-                    </td>
+        {/* Scrollable Attendance Table Container */}
+        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '0.5rem', color: '#111827', overflow: 'hidden' }}>
+          <div className="table-container" style={{ background: '#ffffff', border: 'none' }}>
+            {participants.length > 0 ? (
+              <table style={{ width: '100%', color: '#111827', minWidth: '700px' }}>
+                <thead>
+                  <tr>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>No</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Name</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Staff ID</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Rank</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>HUB</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Lic/Fac No.</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Timestamp</th>
+                    <th style={{ color: '#4B5563', borderBottom: '2px solid #E5E7EB', background: '#F9FAFB' }}>Signature</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#6B7280' }}>
-              Waiting for participants to scan and sign in...
-            </div>
-          )}
+                </thead>
+                <tbody>
+                  {participants.map((p, i) => (
+                    <tr key={i}>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#111827' }}>{i + 1}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#111827', fontWeight: 600 }}>{p.name}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563' }}>{p.staffId}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563' }}>{p.rank}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563' }}>{p.hub}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563' }}>{p.license}</td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', color: '#4B5563', whiteSpace: 'nowrap' }}>
+                        {p.scannedAt ? (
+                          (() => {
+                            const d = new Date(p.scannedAt);
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const hours = String(d.getHours()).padStart(2, '0');
+                            const mins = String(d.getMinutes()).padStart(2, '0');
+                            return `${day}/${month} ${hours}:${mins}`;
+                          })()
+                        ) : '-'}
+                      </td>
+                      <td style={{ borderBottom: '1px solid #E5E7EB', padding: '0.25rem 0.75rem' }}>
+                        {p.signature && <img src={p.signature} alt="Signature" style={{ height: '36px', maxWidth: '90px' }} />}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: '#6B7280' }}>
+                Waiting for participants to scan and sign in...
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { saveEvent, getUsersByRole, getAllUsers, getCurrentUser, getAllDepartments } from '../db';
-import { Rocket, Users, Target, Clock } from 'lucide-react';
+import { Rocket, Users, Target, Clock, Plus, Trash2 } from 'lucide-react';
 import { calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
 import { getAllowedDepartmentsForUser } from '../utils/departmentUtils';
 
@@ -16,13 +16,14 @@ const CreateEvent = () => {
     type: 'Meeting',
     venue: '',
     room: '',
-    department: '', // Will be set by useEffect
-    leaders: [''] // Up to 3
+    department: '',
+    leaders: ['']
   });
   
   const [user, setUser] = useState(null);
   const [departments, setDepartments] = useState([]);
   const [availableLeaders, setAvailableLeaders] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const fetchLeadersAndUser = async () => {
@@ -73,6 +74,9 @@ const CreateEvent = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+
     const actualLeaders = formData.leaders.filter(l => l.trim() !== '');
     
     // Determine formatted time based on event type
@@ -98,7 +102,6 @@ const CreateEvent = () => {
       const leaderRole = formData.type === 'Training' ? 'Instructor' : 'Chairman';
       const leaderName = primaryLeaderObj?.name || primaryLeaderObj?.full_name || 'Leader';
 
-      // Mailto approach (Option 2)
       const subject = encodeURIComponent(`New Event Assignment - ${formData.name}`);
       
       const emailBody = `Hi ${leaderName},
@@ -121,24 +124,21 @@ Access Link: ${eventLink}
 Thank you.`;
 
       const body = encodeURIComponent(emailBody);
-      
       const gmailUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${email}&su=${subject}&body=${body}`;
       
       const mailtoLink = document.createElement('a');
       mailtoLink.href = gmailUrl;
-      mailtoLink.target = '_blank'; // Opens Gmail in a new tab
+      mailtoLink.target = '_blank';
       document.body.appendChild(mailtoLink);
       mailtoLink.click();
       document.body.removeChild(mailtoLink);
       
-      // Navigate to dashboard after a delay
       setTimeout(() => {
         navigate(`/dashboard/${event.id}`);
       }, 1500);
       return;
     }
 
-    // Navigate to dashboard automatically (if no leaders)
     navigate(`/dashboard/${event.id}`);
   };
 
@@ -149,15 +149,16 @@ Thank you.`;
   const leaderLabel = formData.type === 'Training' ? 'Instructor' : 'Chairman';
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '850px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '850px', margin: '0 auto', width: '100%' }}>
       <div className="glass-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2.5rem' }}>
-          <div style={{ padding: '1rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '16px', color: 'var(--aa-red)', boxShadow: '0 8px 16px rgba(226, 22, 41, 0.1)' }}>
-            <img src="/icon.png" alt="Logo" style={{ width: '28px', height: '28px', objectFit: 'contain' }} />
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '1.75rem', flexWrap: 'wrap' }}>
+          <div style={{ padding: '0.85rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '14px', color: 'var(--aa-red)', boxShadow: '0 6px 14px rgba(226, 22, 41, 0.1)' }}>
+            <img src="/icon.png" alt="Logo" style={{ width: '26px', height: '26px', objectFit: 'contain' }} />
           </div>
           <div>
-            <h2 style={{ fontSize: '1.75rem', marginBottom: '0.25rem' }}>Create New Event</h2>
-            <p style={{ color: 'var(--text-secondary)' }}>Launch your meeting or training session with AirAsia AttendSync</p>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.2rem' }}>Create New Event</h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Launch your meeting or training session with AirAsia AttendSync</p>
           </div>
         </div>
 
@@ -182,15 +183,15 @@ Thank you.`;
 
           {formData.type === 'Training' ? (
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                 <label style={{ margin: 0 }}>Training Session Hours</label>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.6rem', borderRadius: '6px' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>
                   ⏱️ Duration: {formatDurationDisplay(trainingHours)} ({trainingHours} hrs)
                 </span>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '0.75rem' }}>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>Start Time</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>Start Time</span>
                   <input 
                     required 
                     type="time" 
@@ -201,7 +202,7 @@ Thank you.`;
                   />
                 </div>
                 <div>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>End Time</span>
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.25rem' }}>End Time</span>
                   <input 
                     required 
                     type="time" 
@@ -256,22 +257,21 @@ Thank you.`;
             <input required type="text" name="room" className="form-control" value={formData.room} onChange={handleChange} placeholder="e.g. Conference Room A" />
           </div>
 
-
-          <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '1.75rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Users size={20} style={{ color: 'var(--aa-red)' }} />
-                <h3 style={{ margin: 0, fontSize: '1.2rem' }}>Assign {leaderLabel}</h3>
+          <div className="glass-card" style={{ gridColumn: '1 / -1', padding: '1.25rem', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users size={18} style={{ color: 'var(--aa-red)' }} />
+                <h3 style={{ margin: 0, fontSize: '1.05rem' }}>Assign {leaderLabel}</h3>
               </div>
               {formData.leaders.length < 3 && (
-                <button type="button" onClick={addLeader} className="btn btn-outline" style={{ padding: '0.4rem 1rem', fontSize: '0.85rem' }}>
+                <button type="button" onClick={addLeader} className="btn btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', minHeight: '32px' }}>
                   + Add {leaderLabel}
                 </button>
               )}
             </div>
 
             {formData.leaders.map((leader, index) => (
-              <div key={index} style={{ display: 'flex', gap: '1rem', marginBottom: index !== formData.leaders.length - 1 ? '1rem' : '0' }}>
+              <div key={index} style={{ display: 'flex', gap: '0.75rem', marginBottom: index !== formData.leaders.length - 1 ? '0.75rem' : '0' }}>
                 <div className="form-group" style={{ margin: 0, flex: 1 }}>
                   <select
                     required
@@ -288,19 +288,19 @@ Thank you.`;
                   </select>
                 </div>
                 {formData.leaders.length > 1 && (
-                  <button type="button" onClick={() => removeLeader(index)} className="btn btn-outline" style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}>
-                    Remove
+                  <button type="button" onClick={() => removeLeader(index)} className="btn btn-outline" style={{ color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)', padding: '0.5rem' }}>
+                    <Trash2 size={16} />
                   </button>
                 )}
               </div>
             ))}
-            <p style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: '1rem' }}>Assign up to 3 {leaderLabel.toLowerCase()}s for this event.</p>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', marginTop: '0.75rem', margin: 0 }}>Assign up to 3 {leaderLabel.toLowerCase()}s for this event.</p>
           </div>
 
-          <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', fontSize: '1.1rem', padding: '1rem' }}>
-              <Target size={20} />
-              Submit & Notify Leaders
+          <div style={{ gridColumn: '1 / -1', marginTop: '0.75rem' }}>
+            <button type="submit" disabled={submitting} className="btn btn-primary" style={{ width: '100%', fontSize: '1.05rem', padding: '0.95rem' }}>
+              <Target size={18} />
+              {submitting ? 'Creating Event...' : 'Submit & Notify Leaders'}
             </button>
           </div>
         </form>
