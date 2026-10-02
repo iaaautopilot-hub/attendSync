@@ -7,7 +7,7 @@ const Login = () => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: 'https://attendance-list-web-app.vercel.app/'
+        redirectTo: `${window.location.origin}/`
       }
     });
 
