@@ -32,3 +32,4 @@ dist-ssr
 database_migration/backup_data/
 database_migration/02_*.sql
 database_migration/data_*.sql
+backupdata/
