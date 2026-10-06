@@ -11,6 +11,7 @@ const EventDashboard = () => {
   const [participants, setParticipants] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
   const [remarks, setRemarks] = useState('');
+  const [trainingType, setTrainingType] = useState('Initial');
   const [loaOverrides, setLoaOverrides] = useState({});
   const remarksInitialized = useRef(false);
 
@@ -26,6 +27,11 @@ const EventDashboard = () => {
       setParticipants(p);
       if (!remarksInitialized.current || isFirstLoad) {
         setRemarks(activeEvent.remarks || '');
+        if (activeEvent.training_type || activeEvent.trainingType) {
+          setTrainingType(activeEvent.training_type || activeEvent.trainingType);
+        } else {
+          setTrainingType('Initial');
+        }
         remarksInitialized.current = true;
       }
     }
@@ -46,8 +52,11 @@ const EventDashboard = () => {
   }, [eventId]);
 
   const handleActivate = async () => {
+    const selectedTrainingType = event.type === 'Training' ? (trainingType || 'Initial') : null;
+    const leaderTitle = event.type === 'Training' ? 'INSTRUCTOR' : 'CHAIRPERSON';
+
     // Generate unique verification data for the Instructor/Chairman QR code
-    const verificationText = `VERIFIED CHAIRPERSON: ${currentUser?.name || 'N/A'} (${currentUser?.staff_id || 'N/A'}) | EVENT: ${event.event_code || 'N/A'} | SUBJ: ${event.name} | DATE: ${event.date} | SYSTEM: ATTENDSYNC`;
+    const verificationText = `VERIFIED ${leaderTitle}: ${currentUser?.name || 'N/A'} (${currentUser?.staff_id || 'N/A'}) | EVENT: ${event.event_code || 'N/A'} | SUBJ: ${event.name} | DATE: ${event.date}${event.type === 'Training' ? ` | TYPE: ${selectedTrainingType}` : ''} | SYSTEM: ATTENDSYNC`;
     
     try {
       // Generate the QR code as a Data URL
@@ -56,10 +65,13 @@ const EventDashboard = () => {
         width: 200
       });
 
-      const updated = await activateEvent(event.id, qrDataUrl, remarks);
+      const updated = await activateEvent(event.id, qrDataUrl, remarks, selectedTrainingType);
       if (updated && !updated.error) {
         setEvent(updated);
         setRemarks(updated.remarks || '');
+        if (updated.training_type || updated.trainingType) {
+          setTrainingType(updated.training_type || updated.trainingType);
+        }
         alert(`${event.type === 'Training' ? 'Instructor' : 'Chairperson'} digital verification complete. Event is now ACTIVE.`);
       } else {
         alert("Unexpected error: Could not activate event in Database.");
@@ -71,10 +83,11 @@ const EventDashboard = () => {
   };
 
   const handleUpdateRemarks = async () => {
-    const success = await updateEventRemarks(event.id, remarks);
+    const selectedTrainingType = event.type === 'Training' ? (trainingType || 'Initial') : null;
+    const success = await updateEventRemarks(event.id, remarks, selectedTrainingType);
     if (success) {
-      alert("Remarks updated successfully!");
-      setEvent({ ...event, remarks: remarks });
+      alert("Remarks & session details updated successfully!");
+      setEvent({ ...event, remarks: remarks, training_type: selectedTrainingType, trainingType: selectedTrainingType });
     } else {
       alert("Failed to update remarks.");
     }
@@ -83,9 +96,13 @@ const EventDashboard = () => {
   const handleGenerateSoftCopy = async () => {
     if (participants.length === 0) return;
     
-    // Inject the overridden LOAs into event.leaderDetails
+    const selectedTrainingType = event.type === 'Training' ? (trainingType || event.training_type || 'Initial') : null;
+
+    // Inject the overridden LOAs and selected trainingType into event
     const updatedEvent = {
       ...event,
+      training_type: selectedTrainingType,
+      trainingType: selectedTrainingType,
       leaderDetails: (event.leaderDetails || []).map(ld => ({
         ...ld,
         loa_no: loaOverrides[ld.staff_id] || ld.loa_no
@@ -121,9 +138,16 @@ const EventDashboard = () => {
         <div className="glass-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
             <div style={{ flex: '1 1 240px' }}>
-              <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`} style={{ marginBottom: '1rem' }}>
-                {event.type}
-              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <span className={`badge ${event.type === 'Meeting' ? 'badge-blue' : 'badge-purple'}`}>
+                  {event.type}
+                </span>
+                {event.type === 'Training' && (
+                  <span className="badge" style={{ background: 'rgba(226, 22, 41, 0.15)', color: '#ff6b6b', border: '1px solid rgba(226, 22, 41, 0.3)' }}>
+                    Type: {trainingType || event.training_type || 'Initial'}
+                  </span>
+                )}
+              </div>
               <h2 style={{ fontSize: '1.6rem', marginBottom: '0.85rem', wordBreak: 'break-word' }}>{event.name}</h2>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -135,6 +159,11 @@ const EventDashboard = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                   <span>🏢</span> <span>Dept: {event.department}</span>
                 </div>
+                {event.type === 'Training' && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                    <span>🎯</span> <span>Training Type: <strong style={{ color: 'var(--aa-white)' }}>{trainingType || event.training_type || 'Initial'}</strong></span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -156,12 +185,72 @@ const EventDashboard = () => {
                 <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.25rem', marginBottom: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: 'var(--accent-success)', marginBottom: '0.35rem' }}>
                     <ShieldCheck size={22} />
-                    <strong style={{ fontSize: '1rem' }}>Chairperson Digital Verification</strong>
+                    <strong style={{ fontSize: '1rem' }}>{event.type === 'Training' ? 'Instructor Digital Verification' : 'Chairperson Digital Verification'}</strong>
                   </div>
                   <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
                     A unique, encrypted QR signature will be generated as your official verification for this session.
                   </p>
                 </div>
+
+                {/* Training Type Selector for Instructor before Acknowledgment */}
+                {event.type === 'Training' && (
+                  <div style={{ width: '100%', marginBottom: '1.25rem', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--aa-white)', margin: 0 }}>
+                        Training Type <span style={{ color: 'var(--aa-red)' }}>*</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                        Select before acknowledging
+                      </span>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setTrainingType('Initial')}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          borderRadius: '10px',
+                          border: trainingType === 'Initial' ? '2px solid var(--aa-red)' : '1px solid var(--border-color)',
+                          background: trainingType === 'Initial' ? 'rgba(226, 22, 41, 0.15)' : 'rgba(255,255,255,0.03)',
+                          color: trainingType === 'Initial' ? '#fff' : 'var(--text-secondary)',
+                          fontWeight: trainingType === 'Initial' ? '700' : '500',
+                          fontSize: '0.95rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: trainingType === 'Initial' ? 'var(--aa-red)' : 'transparent', border: '2px solid ' + (trainingType === 'Initial' ? 'var(--aa-red)' : 'var(--text-secondary)') }}></span>
+                        Initial
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTrainingType('Recurrent')}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          borderRadius: '10px',
+                          border: trainingType === 'Recurrent' ? '2px solid var(--aa-red)' : '1px solid var(--border-color)',
+                          background: trainingType === 'Recurrent' ? 'rgba(226, 22, 41, 0.15)' : 'rgba(255,255,255,0.03)',
+                          color: trainingType === 'Recurrent' ? '#fff' : 'var(--text-secondary)',
+                          fontWeight: trainingType === 'Recurrent' ? '700' : '500',
+                          fontSize: '0.95rem',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: trainingType === 'Recurrent' ? 'var(--aa-red)' : 'transparent', border: '2px solid ' + (trainingType === 'Recurrent' ? 'var(--aa-red)' : 'var(--text-secondary)') }}></span>
+                        Recurrent
+                      </button>
+                    </div>
+                  </div>
+                )}
   
                 <div style={{ width: '100%', marginBottom: '1.25rem', textAlign: 'left' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
@@ -174,7 +263,7 @@ const EventDashboard = () => {
                   ></textarea>
                 </div>
                 <button onClick={handleActivate} className="btn btn-primary" style={{ width: '100%', padding: '0.95rem', fontSize: '1.05rem' }}>
-                  Verify & Activate Event
+                  {event.type === 'Training' ? 'Acknowledge & Activate Event' : 'Verify & Activate Event'}
                 </button>
               </div>
             ) : (
@@ -182,7 +271,7 @@ const EventDashboard = () => {
                 <ShieldCheck size={40} style={{ color: 'var(--text-secondary)', marginBottom: '0.75rem', opacity: 0.5 }} />
                 <h3 style={{ fontSize: '1.25rem', marginBottom: '0.4rem' }}>Pending Activation</h3>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                  This event is waiting for the assigned {leaderLabel.toLowerCase()} to digitally verify and activate it.
+                  This event is waiting for the assigned {leaderLabel.toLowerCase()} to select training type and digitally acknowledge & activate it.
                 </p>
               </div>
             )
@@ -193,6 +282,52 @@ const EventDashboard = () => {
               </div>
               <h3 style={{ fontSize: '1.35rem', marginBottom: '0.75rem' }}>Event Active</h3>
               
+              {/* Training Type Selector for Active Event */}
+              {event.type === 'Training' && (
+                <div style={{ padding: '0.85rem 1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '1rem', width: '100%', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div>
+                      <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--aa-red)', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Training Type</p>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Instructor selection</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.4rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setTrainingType('Initial')}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '8px',
+                          border: trainingType === 'Initial' ? '1px solid var(--aa-red)' : '1px solid var(--border-color)',
+                          background: trainingType === 'Initial' ? 'rgba(226, 22, 41, 0.2)' : 'transparent',
+                          color: trainingType === 'Initial' ? '#fff' : 'var(--text-secondary)',
+                          fontWeight: trainingType === 'Initial' ? '700' : '400',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Initial
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTrainingType('Recurrent')}
+                        style={{
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '8px',
+                          border: trainingType === 'Recurrent' ? '1px solid var(--aa-red)' : '1px solid var(--border-color)',
+                          background: trainingType === 'Recurrent' ? 'rgba(226, 22, 41, 0.2)' : 'transparent',
+                          color: trainingType === 'Recurrent' ? '#fff' : 'var(--text-secondary)',
+                          fontWeight: trainingType === 'Recurrent' ? '700' : '400',
+                          fontSize: '0.8rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Recurrent
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Remarks Box */}
               <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', width: '100%', textAlign: 'left' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>

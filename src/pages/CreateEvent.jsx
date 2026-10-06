@@ -14,6 +14,7 @@ const CreateEvent = () => {
     startTime: '09:00',
     endTime: '17:00',
     type: 'Meeting',
+    trainingType: 'Initial',
     venue: '',
     room: '',
     department: '',
@@ -183,6 +184,13 @@ Thank you.`;
 
           {formData.type === 'Training' ? (
             <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.82rem', marginBottom: '0.35rem', display: 'block' }}>Training Type</label>
+                <select name="trainingType" className="form-control" value={formData.trainingType || 'Initial'} onChange={handleChange}>
+                  <option value="Initial">Initial</option>
+                  <option value="Recurrent">Recurrent</option>
+                </select>
+              </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                 <label style={{ margin: 0 }}>Training Session Hours</label>
                 <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--aa-white)', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid rgba(226, 22, 41, 0.4)', padding: '0.2rem 0.5rem', borderRadius: '6px' }}>

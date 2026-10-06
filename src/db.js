@@ -301,6 +301,8 @@ export const getAllEvents = async () => {
       isActive: e.is_active && (!e.activated_at || (new Date() - new Date(e.activated_at)) < 8 * 3600 * 1000),
       isExpired: e.activated_at && (new Date() - new Date(e.activated_at)) >= 8 * 3600 * 1000,
       type: e.event_type,
+      training_type: e.training_type,
+      trainingType: e.training_type,
       leaders: e.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || []
     };
   });
@@ -340,6 +342,7 @@ export const saveEvent = async (eventData) => {
       department: eventData.department,
       created_by: eventData.created_by,
       remarks: eventRemarks,
+      training_type: eventData.type === 'Training' ? (eventData.trainingType || eventData.training_type || 'Initial') : null,
       is_active: false
     }])
     .select()
@@ -416,6 +419,9 @@ export const updateEventInfo = async (eventId, eventData) => {
     room: eventData.room,
     department: eventData.department
   };
+  if (eventData.type === 'Training') {
+    updatePayload.training_type = eventData.trainingType || eventData.training_type || 'Initial';
+  }
   if (eventRemarks !== undefined) {
     updatePayload.remarks = eventRemarks;
   }
@@ -507,6 +513,8 @@ export const getEvent = async (id) => {
     isActive: data.is_active && (!data.activated_at || (new Date() - new Date(data.activated_at)) < 8 * 3600 * 1000),
     isExpired: data.activated_at && (new Date() - new Date(data.activated_at)) >= 8 * 3600 * 1000,
     type: data.event_type,
+    training_type: data.training_type,
+    trainingType: data.training_type,
     creator: data.users ? { name: data.users.full_name, staff_id: data.users.staff_id } : null,
     leaders: data.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || [],
     leaderDetails: data.event_assignments?.map(a => ({
@@ -517,15 +525,20 @@ export const getEvent = async (id) => {
   };
 };
 
-export const activateEvent = async (id, signatureData, remarks = '') => {
+export const activateEvent = async (id, signatureData, remarks = '', trainingType = null) => {
+  const updatePayload = {
+    is_active: true,
+    leader_signature: signatureData,
+    remarks: remarks,
+    activated_at: new Date().toISOString()
+  };
+  if (trainingType) {
+    updatePayload.training_type = trainingType;
+  }
+
   const { data, error } = await supabase
     .from('events')
-    .update({
-      is_active: true,
-      leader_signature: signatureData,
-      remarks: remarks,
-      activated_at: new Date().toISOString()
-    })
+    .update(updatePayload)
     .eq('id', id)
     .select()
     .maybeSingle();
@@ -539,10 +552,15 @@ export const activateEvent = async (id, signatureData, remarks = '') => {
   return await getEvent(id);
 };
 
-export const updateEventRemarks = async (id, remarks) => {
+export const updateEventRemarks = async (id, remarks, trainingType = null) => {
+  const updatePayload = { remarks };
+  if (trainingType) {
+    updatePayload.training_type = trainingType;
+  }
+
   const { error } = await supabase
     .from('events')
-    .update({ remarks })
+    .update(updatePayload)
     .eq('id', id);
 
   if (error) {
@@ -721,6 +739,7 @@ export const getTrainingAnalytics = async (filters = {}) => {
       room: e.room,
       department: e.department,
       participantsCount: e.event_signatures?.length || 0,
+      training_type: e.training_type || 'Initial',
       instructors: e.event_assignments?.map(a => a.users?.full_name).filter(Boolean) || []
     };
     processedEvents.push(eventObj);

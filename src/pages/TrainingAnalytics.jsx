@@ -404,7 +404,14 @@ const TrainingAnalytics = () => {
                         {s.date}
                       </td>
                       <td style={{ padding: '0.75rem 0.85rem', fontWeight: 600, color: 'var(--aa-white)' }}>
-                        {s.name}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          <span>{s.name}</span>
+                          {s.training_type && (
+                            <span style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '4px', background: s.training_type === 'Initial' ? 'rgba(59, 130, 246, 0.15)' : 'rgba(168, 85, 247, 0.15)', color: s.training_type === 'Initial' ? '#60a5fa' : '#c084fc', border: '1px solid rgba(255,255,255,0.08)' }}>
+                              {s.training_type}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td style={{ padding: '0.75rem 0.85rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
                         {s.time || '-'}

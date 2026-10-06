@@ -126,7 +126,10 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setFont('helvetica', 'bold');
     doc.text('TRAINING TYPE', margin + 1, currentY + 4);
     doc.setFont('helvetica', 'normal');
-    doc.text(event.type?.toUpperCase() || '', margin + 25, currentY + 4);
+    const selectedTrainingType = event.type === 'Training'
+      ? (event.training_type || event.trainingType || 'INITIAL').toUpperCase()
+      : '-';
+    doc.text(selectedTrainingType, margin + 25, currentY + 4);
 
     drawBox(doc, margin + 100, currentY, 82, gridHeight);
     doc.setFont('helvetica', 'bold');
