@@ -256,6 +256,15 @@ export const updateUserSignature = async (staffId, signatureData) => {
     .eq('staff_id', staffId);
   return !error;
 };
+export const updateUserLoa = async (staffId, loaNo) => {
+  if (!staffId || !loaNo) return false;
+  const { error } = await supabase
+    .from('users')
+    .update({ loa_no: loaNo.trim() })
+    .eq('staff_id', staffId);
+  if (!error) invalidateUsersCache();
+  return !error;
+};
 export const deleteUser = async (staffId) => {
   invalidateUsersCache();
   return await supabase.from('users').delete().eq('staff_id', staffId);

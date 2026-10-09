@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { getEvent, getParticipants, getParticipantsCount, activateEvent, getCurrentUser, updateEventRemarks } from '../db';
+import { getEvent, getParticipants, getParticipantsCount, activateEvent, getCurrentUser, updateEventRemarks, updateUserLoa } from '../db';
 import QRCode from 'qrcode';
 import { FileDown, Calendar, MapPin, Users, RefreshCw, ShieldCheck, ExternalLink, CheckCircle, Save, Lock, Clock, ShieldAlert } from 'lucide-react';
 import { exportAttendancePDF } from '../utils/pdfExport';
@@ -33,6 +33,17 @@ const EventDashboard = () => {
       if (activeEvent) {
         setEvent(activeEvent);
         activeEventRef.current = activeEvent;
+        if (activeEvent.leaderDetails && activeEvent.leaderDetails.length > 0) {
+          setLoaOverrides(prev => {
+            const updated = { ...prev };
+            activeEvent.leaderDetails.forEach(ld => {
+              if (updated[ld.staff_id] === undefined && ld.loa_no) {
+                updated[ld.staff_id] = ld.loa_no;
+              }
+            });
+            return updated;
+          });
+        }
         if (!remarksInitialized.current || isFullRefresh) {
           setRemarks(activeEvent.remarks || '');
           if (activeEvent.training_type || activeEvent.trainingType) {
@@ -61,6 +72,12 @@ const EventDashboard = () => {
     const fetchAdmin = async () => {
       const u = await getCurrentUser();
       setCurrentUser(u);
+      if (u?.staff_id && u.loa_no) {
+        setLoaOverrides(prev => ({
+          ...prev,
+          [u.staff_id]: prev[u.staff_id] !== undefined ? prev[u.staff_id] : u.loa_no
+        }));
+      }
     };
     fetchAdmin();
 
@@ -100,13 +117,37 @@ const EventDashboard = () => {
       return;
     }
 
+    // Require Instructor LOA Number before activating a Training event
+    if (event.type === 'Training') {
+      const leadersToCheck = (event.leaderDetails && event.leaderDetails.length > 0)
+        ? event.leaderDetails
+        : (currentUser ? [{ staff_id: currentUser.staff_id, name: currentUser.name, loa_no: currentUser.loa_no }] : []);
+
+      for (const ld of leadersToCheck) {
+        const enteredLoa = (loaOverrides[ld.staff_id] !== undefined ? loaOverrides[ld.staff_id] : (ld.loa_no || '')).trim();
+        if (!enteredLoa) {
+          alert(`Instructor LOA Number is required before activating the event. Please enter the LOA Number for ${ld.name || 'Instructor'}.`);
+          return;
+        }
+      }
+    }
+
     const selectedTrainingType = event.type === 'Training' ? (trainingType || 'Initial') : null;
     const leaderTitle = event.type === 'Training' ? 'INSTRUCTOR' : 'CHAIRPERSON';
+    const activeLoa = currentUser?.staff_id ? (loaOverrides[currentUser.staff_id] || currentUser?.loa_no || '') : '';
 
     // Generate unique verification data for the Instructor/Chairman QR code
-    const verificationText = `VERIFIED ${leaderTitle}: ${currentUser?.name || 'N/A'} (${currentUser?.staff_id || 'N/A'}) | EVENT: ${event.event_code || 'N/A'} | SUBJ: ${event.name} | DATE: ${event.date}${event.type === 'Training' ? ` | TYPE: ${selectedTrainingType}` : ''} | SYSTEM: ATTENDSYNC`;
+    const verificationText = `VERIFIED ${leaderTitle}: ${currentUser?.name || 'N/A'} (${currentUser?.staff_id || 'N/A'})${activeLoa ? ` | LOA: ${activeLoa}` : ''} | EVENT: ${event.event_code || 'N/A'} | SUBJ: ${event.name} | DATE: ${event.date}${event.type === 'Training' ? ` | TYPE: ${selectedTrainingType}` : ''} | SYSTEM: ATTENDSYNC`;
     
     try {
+      // Persist any entered LOA to users table so instructor profile is updated
+      for (const staffId of Object.keys(loaOverrides)) {
+        const val = loaOverrides[staffId]?.trim();
+        if (val) {
+          await updateUserLoa(staffId, val);
+        }
+      }
+
       // Generate the QR code as a Data URL
       const qrDataUrl = await QRCode.toDataURL(verificationText, {
         margin: 1,
@@ -389,6 +430,77 @@ const EventDashboard = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Instructor LOA Requirement before Activation */}
+                {event.type === 'Training' && (
+                  <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.03)', borderRadius: '14px', border: '1px solid var(--border-color)', marginBottom: '1.25rem', width: '100%', textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.65rem' }}>
+                      <label style={{ fontSize: '0.82rem', fontWeight: '700', color: 'var(--aa-white)', margin: 0, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                        Instructor LOA Number <span style={{ color: 'var(--aa-red)' }}>*</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: '#f87171', fontWeight: '600' }}>
+                        Required for Activation
+                      </span>
+                    </div>
+
+                    {event.leaderDetails && event.leaderDetails.length > 0 ? (
+                      event.leaderDetails.map(ld => {
+                        const val = loaOverrides[ld.staff_id] !== undefined ? loaOverrides[ld.staff_id] : (ld.loa_no || '');
+                        const isMissing = !val.trim();
+                        return (
+                          <div key={ld.staff_id} style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.65rem' }}>
+                            <label style={{ fontSize: '0.8rem', color: isMissing ? '#fca5a5' : 'var(--text-secondary)', marginBottom: '0.35rem', fontWeight: 600 }}>
+                              {ld.name} ({ld.staff_id}) {isMissing && <span style={{ color: '#f87171' }}>(Required)</span>}
+                            </label>
+                            <input 
+                              type="text" 
+                              required
+                              className="form-control" 
+                              placeholder="Enter Instructor LOA Number (e.g. LOA/2026/0123)"
+                              value={val}
+                              onChange={(e) => handleLoaChange(ld.staff_id, e.target.value)}
+                              style={{
+                                background: isMissing ? 'rgba(239, 68, 68, 0.08)' : 'rgba(0,0,0,0.25)',
+                                border: isMissing ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid var(--border-color)',
+                                color: 'var(--aa-white)',
+                                padding: '0.65rem 0.85rem',
+                                borderRadius: '8px',
+                                minHeight: '40px',
+                                fontSize: '0.88rem'
+                              }}
+                            />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', marginBottom: '0.5rem' }}>
+                        <label style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.35rem', fontWeight: 600 }}>
+                          {currentUser?.name || 'Instructor'} ({currentUser?.staff_id || 'N/A'}) <span style={{ color: '#f87171' }}>*</span>
+                        </label>
+                        <input 
+                          type="text" 
+                          required
+                          className="form-control" 
+                          placeholder="Enter Instructor LOA Number (e.g. LOA/2026/0123)"
+                          value={currentUser?.staff_id ? (loaOverrides[currentUser.staff_id] !== undefined ? loaOverrides[currentUser.staff_id] : (currentUser?.loa_no || '')) : ''}
+                          onChange={(e) => currentUser?.staff_id && handleLoaChange(currentUser.staff_id, e.target.value)}
+                          style={{
+                            background: 'rgba(0,0,0,0.25)',
+                            border: '1px solid var(--border-color)',
+                            color: 'var(--aa-white)',
+                            padding: '0.65rem 0.85rem',
+                            borderRadius: '8px',
+                            minHeight: '40px',
+                            fontSize: '0.88rem'
+                          }}
+                        />
+                      </div>
+                    )}
+                    <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                      * Instructor LOA number will be recorded in the digital verification QR code and printed on official attendance reports.
+                    </p>
+                  </div>
+                )}
   
                 <div style={{ width: '100%', marginBottom: '1.25rem', textAlign: 'left' }}>
                   <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: '600', marginBottom: '0.4rem', color: 'var(--text-secondary)' }}>Meeting / Training Remarks</label>
@@ -506,7 +618,7 @@ const EventDashboard = () => {
                         type="text" 
                         className="form-control" 
                         placeholder={`Default LOA: ${ld.loa_no || 'None'}`}
-                        value={loaOverrides[ld.staff_id] || ''}
+                        value={loaOverrides[ld.staff_id] !== undefined ? loaOverrides[ld.staff_id] : (ld.loa_no || '')}
                         onChange={(e) => handleLoaChange(ld.staff_id, e.target.value)}
                         style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'var(--aa-white)', padding: '0.6rem 0.85rem', borderRadius: '8px', minHeight: '40px', fontSize: '0.88rem' }}
                       />
