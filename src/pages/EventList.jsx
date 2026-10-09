@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock, Plus } from 'lucide-react';
-import { parseEventTime, calculateDurationHours, formatDurationDisplay } from '../utils/timeUtils';
+import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock, Plus, Lock } from 'lucide-react';
+import { parseEventTime, calculateDurationHours, formatDurationDisplay, getActivationLockStatus } from '../utils/timeUtils';
 import { canAdminAccessDepartment, getAllowedDepartmentsForUser, canUserViewOrEditEvent, isFlightOperationIntegrated } from '../utils/departmentUtils';
 
 const EventList = () => {
@@ -301,7 +301,33 @@ const EventList = () => {
                       </div>
                     </td>
                     <td style={{ color: 'var(--text-secondary)', whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
-                      {event.date} {event.time && `• ${event.time}`}
+                      <div>{event.date} {event.time && `• ${event.time}`}</div>
+                      {(() => {
+                        if (!event.isActive && !event.isExpired && event.type === 'Training') {
+                          const lock = getActivationLockStatus(event);
+                          if (lock.isLocked) {
+                            return (
+                              <div style={{ marginTop: '0.35rem' }}>
+                                <span style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.3rem',
+                                  fontSize: '0.68rem',
+                                  color: '#EAB308',
+                                  background: 'rgba(234, 179, 8, 0.12)',
+                                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                                  padding: '0.15rem 0.45rem',
+                                  borderRadius: '6px',
+                                  fontWeight: '600'
+                                }}>
+                                  <Lock size={10} /> Locked until -30m ({lock.timeRemainingStr})
+                                </span>
+                              </div>
+                            );
+                          }
+                        }
+                        return null;
+                      })()}
                     </td>
                     <td style={{ color: 'var(--text-secondary)', fontSize: '0.82rem' }}>
                       📍 {event.venue} {event.room && `(${event.room})`}

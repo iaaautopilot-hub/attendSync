@@ -23,18 +23,33 @@ const getRoleId = (roleName) => {
 
 // --- AUTH & USER MANAGEMENT ---
 
-export const getAllUsers = async () => {
+let cachedAllUsers = null;
+let lastAllUsersFetchTime = 0;
+const ALL_USERS_CACHE_TTL = 60000; // 60 seconds
+
+export const invalidateUsersCache = () => {
+  cachedAllUsers = null;
+  lastAllUsersFetchTime = 0;
+};
+
+export const getAllUsers = async (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cachedAllUsers && (now - lastAllUsersFetchTime) < ALL_USERS_CACHE_TTL) {
+    return cachedAllUsers;
+  }
+
+  // Exclude password and heavy base64 signature_data from bulk user list to save egress
   const { data, error } = await supabase
     .from('users')
-    .select('*, roles(role_name), rank(rank_name), hub(hub_name)');
+    .select('id, staff_id, full_name, email, username, loa_no, must_change_password, multi_roles, role_id, roles(role_name), rank(rank_name), hub(hub_name)');
 
   if (error) {
     console.error('Error fetching users:', error);
-    return [];
+    return cachedAllUsers || [];
   }
 
   // Flatten and map for easier app usage
-  return data.map(u => {
+  cachedAllUsers = data.map(u => {
     const legacyRole = u.roles?.role_name
       ? u.roles.role_name.charAt(0).toUpperCase() + u.roles.role_name.slice(1)
       : (ROLE_ID_MAP[u.role_id] || 'Chairman');
@@ -48,6 +63,8 @@ export const getAllUsers = async () => {
       hub: u.hub?.hub_name || ''
     };
   });
+  lastAllUsersFetchTime = now;
+  return cachedAllUsers;
 };
 
 export const getUsersByRole = async (roleName) => {
@@ -59,7 +76,7 @@ export const validateLogin = async (username, password) => {
   console.log('Attempting login for:', username);
   const { data, error } = await supabase
     .from('users')
-    .select('*, roles(role_name)')
+    .select('id, staff_id, full_name, username, password, role_id, multi_roles, roles(role_name)')
     .ilike('username', username);
 
   if (error || !data || data.length === 0) {
@@ -109,33 +126,50 @@ export const loginUser = (username, multi_roles) => {
   return user;
 };
 
+let cachedCurrentUser = null;
+let lastUserFetchTime = 0;
+const USER_CACHE_TTL = 30000; // 30 seconds
+
 export const logoutUser = async () => {
+  cachedCurrentUser = null;
+  lastUserFetchTime = 0;
   await supabase.auth.signOut();
   localStorage.removeItem(AUTH_KEY);
 };
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cachedCurrentUser && (now - lastUserFetchTime) < USER_CACHE_TTL) {
+    return cachedCurrentUser;
+  }
+
   const { data: { session } } = await supabase.auth.getSession();
 
-  if (!session) return null;
+  if (!session) {
+    cachedCurrentUser = null;
+    return null;
+  }
 
   const email = session.user.email;
 
+  // Select only lightweight identity fields - never fetch base64 signature_data or password here
   const { data, error } = await supabase
     .from('users')
-    .select('*, roles(role_name)')
-    .eq('email', email);
+    .select('id, staff_id, full_name, email, username, loa_no, multi_roles, role_id, roles(role_name)')
+    .eq('email', email)
+    .limit(1);
 
   const user = data && data.length > 0 ? data[0] : null;
 
   if (error || !user) {
     console.warn("Authenticated via Google but email not found in users table:", email);
+    cachedCurrentUser = null;
     return null;
   }
 
   const legacyRole = user.roles?.role_name || ROLE_ID_MAP[user.role_id] || 'Admin';
 
-  return {
+  cachedCurrentUser = {
     ...user,
     name: user.full_name,
     staff_id: user.staff_id,
@@ -143,6 +177,8 @@ export const getCurrentUser = async () => {
     role: (user.multi_roles && user.multi_roles.length > 0) ? user.multi_roles[0] : legacyRole,
     token: session.access_token
   };
+  lastUserFetchTime = now;
+  return cachedCurrentUser;
 };
 
 
@@ -173,6 +209,7 @@ export const addUser = async (userData) => {
     return { error };
   }
 
+  invalidateUsersCache();
   return { data: data?.[0] || null };
 };
 
@@ -207,6 +244,7 @@ export const updateUser = async (userData) => {
     return { error };
   }
 
+  invalidateUsersCache();
   return { data: data?.[0] || null };
 };
 export const updateUserSignature = async (staffId, signatureData) => {
@@ -217,22 +255,35 @@ export const updateUserSignature = async (staffId, signatureData) => {
   return !error;
 };
 export const deleteUser = async (staffId) => {
+  invalidateUsersCache();
   return await supabase.from('users').delete().eq('staff_id', staffId);
 };
 
-export const getAllDepartments = async () => {
+let cachedDepartments = null;
+let lastDeptFetchTime = 0;
+const DEPT_CACHE_TTL = 300000; // 5 minutes
+
+export const getAllDepartments = async (forceRefresh = false) => {
+  const now = Date.now();
+  if (!forceRefresh && cachedDepartments && (now - lastDeptFetchTime) < DEPT_CACHE_TTL) {
+    return cachedDepartments;
+  }
+
   const { data, error } = await supabase
     .from('departments')
     .select('*')
     .order('name');
   if (error) {
     console.error('Error fetching departments:', error);
-    return [];
+    return cachedDepartments || [];
   }
+  cachedDepartments = data;
+  lastDeptFetchTime = now;
   return data;
 };
 
 export const addDepartment = async (department) => {
+  cachedDepartments = null;
   const { data, error } = await supabase
     .from('departments')
     .insert([department])
@@ -242,6 +293,7 @@ export const addDepartment = async (department) => {
 };
 
 export const updateDepartment = async (id, updates) => {
+  cachedDepartments = null;
   const { data, error } = await supabase
     .from('departments')
     .update(updates)
@@ -252,6 +304,7 @@ export const updateDepartment = async (id, updates) => {
 };
 
 export const deleteDepartment = async (id) => {
+  cachedDepartments = null;
   const { error } = await supabase
     .from('departments')
     .delete()
@@ -273,9 +326,10 @@ export const updateUserPassword = async (username, newPassword) => {
 // --- EVENT MANAGEMENT ---
 
 export const getAllEvents = async () => {
+  // Exclude heavy leader_signature base64 from event list to minimize egress and transfer time
   const { data, error } = await supabase
     .from('events')
-    .select('*, event_assignments(user_id, assigned_role, users(full_name))')
+    .select('id, event_code, event_type, subject, event_date, event_time, venue, room, department, created_by, created_at, is_active, activated_at, remarks, training_type, event_assignments(user_id, assigned_role, users(full_name))')
     .order('created_at', { ascending: false });
 
   if (error) return [];
@@ -329,10 +383,33 @@ export const saveEvent = async (eventData) => {
     }
   }
 
+  // 0. Auto-generate next sequential event_code by checking only latest 5 events (saves scanning entire table)
+  const { data: latestEvents } = await supabase
+    .from('events')
+    .select('event_code')
+    .not('event_code', 'is', null)
+    .order('created_at', { ascending: false })
+    .limit(5);
+
+  let maxNum = 0;
+  if (latestEvents) {
+    for (const e of latestEvents) {
+      if (e.event_code) {
+        const match = e.event_code.match(/\d+/);
+        if (match) {
+          const num = parseInt(match[0], 10);
+          if (num > maxNum) maxNum = num;
+        }
+      }
+    }
+  }
+  const nextEventCode = `EV-${String(maxNum + 1).padStart(4, '0')}`;
+
   // 1. Create the event
   const { data: event, error: eventErr } = await supabase
     .from('events')
     .insert([{
+      event_code: nextEventCode,
       subject: eventData.name,
       event_type: eventData.type,
       event_date: eventData.date,
@@ -353,33 +430,35 @@ export const saveEvent = async (eventData) => {
     throw eventErr;
   }
 
-  // 2. Assign leaders
+  // 2. Assign leaders in a single batch query (eliminates N+1 loop)
   if (eventData.leaders && eventData.leaders.length > 0) {
-    const assignments = [];
-    for (const leaderName of eventData.leaders) {
-      if (!leaderName || !leaderName.trim()) continue;
-      const trimmed = leaderName.trim();
-      const { data: users, error: uErr } = await supabase
+    const trimmedNames = eventData.leaders.map(l => l?.trim()).filter(Boolean);
+    if (trimmedNames.length > 0) {
+      const { data: matchedUsers } = await supabase
         .from('users')
-        .select('staff_id')
-        .or(`staff_id.eq."${trimmed}",full_name.ilike."${trimmed}"`)
-        .limit(1);
+        .select('staff_id, full_name')
+        .in('full_name', trimmedNames);
 
-      if (uErr) console.error('Error finding leader in saveEvent:', trimmed, uErr);
-      const leader = users && users.length > 0 ? users[0] : null;
-      if (leader) {
-        assignments.push({
+      const userMap = {};
+      (matchedUsers || []).forEach(u => {
+        if (u.full_name) userMap[u.full_name.toLowerCase()] = u.staff_id;
+        if (u.staff_id) userMap[u.staff_id] = u.staff_id;
+      });
+
+      const assignments = trimmedNames.map(name => {
+        const staffId = userMap[name.toLowerCase()] || userMap[name];
+        if (!staffId) return null;
+        return {
           event_id: event.id,
-          user_id: leader.staff_id,
+          user_id: staffId,
           assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
-        });
-      } else {
-        console.warn('Leader not found for assignment:', trimmed);
+        };
+      }).filter(Boolean);
+
+      if (assignments.length > 0) {
+        const { error: insErr } = await supabase.from('event_assignments').insert(assignments);
+        if (insErr) console.error('Error inserting event_assignments in saveEvent:', insErr);
       }
-    }
-    if (assignments.length > 0) {
-      const { error: insErr } = await supabase.from('event_assignments').insert(assignments);
-      if (insErr) console.error('Error inserting event_assignments in saveEvent:', insErr);
     }
   }
 
@@ -446,32 +525,32 @@ export const updateEventInfo = async (eventId, eventData) => {
     if (delErr) console.error('Error deleting previous event_assignments:', delErr);
 
     // Insert new
-    if (eventData.leaders.length > 0) {
-      const assignments = [];
-      for (const leaderName of eventData.leaders) {
-        if (!leaderName || !leaderName.trim()) continue;
-        const trimmed = leaderName.trim();
-        const { data: users, error: uErr } = await supabase
-          .from('users')
-          .select('staff_id')
-          .or(`staff_id.eq."${trimmed}",full_name.ilike."${trimmed}"`)
-          .limit(1);
+    const trimmedNames = eventData.leaders.map(l => l?.trim()).filter(Boolean);
+    if (trimmedNames.length > 0) {
+      const { data: matchedUsers } = await supabase
+        .from('users')
+        .select('staff_id, full_name')
+        .in('full_name', trimmedNames);
 
-        if (uErr) console.error('Error finding leader in updateEventInfo:', trimmed, uErr);
-        const leader = users && users.length > 0 ? users[0] : null;
-        if (leader) {
-          assignments.push({
-            event_id: eventId,
-            user_id: leader.staff_id,
-            assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
-          });
-        } else {
-          console.warn('Leader not found for assignment in updateEventInfo:', trimmed);
-        }
-      }
+      const userMap = {};
+      (matchedUsers || []).forEach(u => {
+        if (u.full_name) userMap[u.full_name.toLowerCase()] = u.staff_id;
+        if (u.staff_id) userMap[u.staff_id] = u.staff_id;
+      });
+
+      const assignments = trimmedNames.map(name => {
+        const staffId = userMap[name.toLowerCase()] || userMap[name];
+        if (!staffId) return null;
+        return {
+          event_id: eventId,
+          user_id: staffId,
+          assigned_role: eventData.type === 'Training' ? 'instructor' : 'chairman'
+        };
+      }).filter(Boolean);
+
       if (assignments.length > 0) {
         const { error: insErr } = await supabase.from('event_assignments').insert(assignments);
-        if (insErr) console.error('Error inserting new event_assignments:', insErr);
+        if (insErr) console.error('Error inserting new event_assignments in updateEventInfo:', insErr);
       }
     }
   }
@@ -600,10 +679,25 @@ export const getParticipants = async (eventId) => {
   }));
 };
 
+export const getParticipantsCount = async (eventId) => {
+  // Ultra-lightweight HEAD query: returns 0 bytes body, only count header to save egress
+  const { count, error } = await supabase
+    .from('event_signatures')
+    .select('id', { count: 'exact', head: true })
+    .eq('event_id', eventId);
+
+  if (error) {
+    console.error('Error fetching participants count:', error);
+    return null;
+  }
+  return count || 0;
+};
+
 export const findUserByStaffId = async (staffId) => {
+  // Exclude password and heavy base64 signature_data
   const { data, error } = await supabase
     .from('users')
-    .select('*, rank(rank_name), hub(hub_name)')
+    .select('staff_id, full_name, loa_no, rank(rank_name), hub(hub_name)')
     .eq('staff_id', staffId)
     .maybeSingle();
 
@@ -655,11 +749,29 @@ export const saveSignature = async (participantData) => {
 // --- TRAINING ANALYTICS ---
 
 export const getTrainingAnalytics = async (filters = {}) => {
-  const { data: events, error } = await supabase
+  // Exclude leader_signature to avoid transferring heavy base64 images
+  let query = supabase
     .from('events')
-    .select('*, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no)), event_signatures(id)')
-    .eq('event_type', 'Training')
-    .order('event_date', { ascending: false });
+    .select('id, subject, event_type, event_date, event_time, remarks, venue, room, department, training_type, event_assignments(user_id, assigned_role, users(full_name, staff_id, loa_no)), event_signatures(id)')
+    .eq('event_type', 'Training');
+
+  if (filters.department && filters.department !== 'ALL') {
+    query = query.eq('department', filters.department);
+  } else if (filters.allowedDepartments && filters.allowedDepartments.length > 0) {
+    query = query.in('department', filters.allowedDepartments);
+  }
+
+  if (filters.startDate) {
+    query = query.gte('event_date', filters.startDate);
+  }
+  if (filters.endDate) {
+    query = query.lte('event_date', filters.endDate);
+  }
+  if (filters.monthYear) {
+    query = query.gte('event_date', `${filters.monthYear}-01`).lte('event_date', `${filters.monthYear}-31`);
+  }
+
+  const { data: events, error } = await query.order('event_date', { ascending: false });
 
   if (error) {
     console.error('Error fetching training analytics:', error);

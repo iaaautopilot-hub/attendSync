@@ -75,10 +75,20 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7.5);
     
-    const rawId = (event.event_code || event.id || '0').toString();
-    const numericId = rawId.replace(/\D/g, '').padStart(5, '0');
+    const year = event.date ? new Date(event.date).getFullYear() : new Date().getFullYear();
+    
+    // Safely extract 5-digit sequential number from event.event_code (e.g. EV-0275 -> 00275)
+    let numericId = '00001';
+    if (event.event_code) {
+      const match = event.event_code.match(/\d+/);
+      if (match) {
+        numericId = match[0].padStart(5, '0');
+      }
+    } else if (event.id && !isNaN(event.id)) {
+      numericId = String(event.id).padStart(5, '0');
+    }
 
-    doc.text(`Rec. No. : IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date().getFullYear()}/${numericId}`, margin + 131, headerTop + 7);
+    doc.text(`Rec. No. : IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${year}/${numericId}`, margin + 131, headerTop + 7);
     doc.text(`Date       : ${event.date}`, margin + 131, headerTop + 14);
     doc.text(`Page       : ${pageNum} of ${totalPagesPlaceholder}`, margin + 131, headerTop + 21);
 

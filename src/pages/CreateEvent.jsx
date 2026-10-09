@@ -26,12 +26,9 @@ const CreateEvent = () => {
   const [availableLeaders, setAvailableLeaders] = useState([]);
   const [submitting, setSubmitting] = useState(false);
 
+  // 1. Initial load for user and departments (run once on mount)
   useEffect(() => {
-    const fetchLeadersAndUser = async () => {
-      const requiredRole = formData.type === 'Training' ? 'Instructor' : 'Chairman';
-      const users = await getUsersByRole(requiredRole);
-      setAvailableLeaders(users);
-      
+    const fetchInitialData = async () => {
       const u = await getCurrentUser();
       setUser(u);
       
@@ -43,11 +40,25 @@ const CreateEvent = () => {
       
       setFormData(prev => ({
         ...prev,
-        department: prev.department || defaultDept,
+        department: prev.department || defaultDept
+      }));
+    };
+    fetchInitialData();
+  }, []);
+
+  // 2. Fetch available leaders when event type changes
+  useEffect(() => {
+    const fetchLeaders = async () => {
+      const requiredRole = formData.type === 'Training' ? 'Instructor' : 'Chairman';
+      const users = await getUsersByRole(requiredRole);
+      setAvailableLeaders(users);
+      
+      setFormData(prev => ({
+        ...prev,
         leaders: ['']
       }));
     };
-    fetchLeadersAndUser();
+    fetchLeaders();
   }, [formData.type]);
 
   const handleChange = (e) => {
@@ -118,7 +129,7 @@ Event Details:
 - Venue: ${formData.venue}
 - Room: ${formData.room}
 
-Please log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!
+Please log in to the portal via the link below to sign and officially open the event. Only then will the QR code for participant attendance be generated!${formData.type === 'Training' ? '\n\nNote: For scheduled training sessions, digital verification and activation will unlock 30 minutes before the scheduled start time.' : ''}
 
 Access Link: ${eventLink}
 

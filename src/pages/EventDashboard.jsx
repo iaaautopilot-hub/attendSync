@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { getEvent, getParticipants, activateEvent, getCurrentUser, updateEventRemarks } from '../db';
+import { getEvent, getParticipants, getParticipantsCount, activateEvent, getCurrentUser, updateEventRemarks } from '../db';
 import QRCode from 'qrcode';
-import { FileDown, Calendar, MapPin, Users, RefreshCw, ShieldCheck, ExternalLink, CheckCircle, Save } from 'lucide-react';
+import { FileDown, Calendar, MapPin, Users, RefreshCw, ShieldCheck, ExternalLink, CheckCircle, Save, Lock, Clock, ShieldAlert } from 'lucide-react';
 import { exportAttendancePDF } from '../utils/pdfExport';
+import { getActivationLockStatus } from '../utils/timeUtils';
 
 const EventDashboard = () => {
   const { eventId } = useParams();
@@ -13,27 +14,45 @@ const EventDashboard = () => {
   const [remarks, setRemarks] = useState('');
   const [trainingType, setTrainingType] = useState('Initial');
   const [loaOverrides, setLoaOverrides] = useState({});
+  const [now, setNow] = useState(new Date());
   const remarksInitialized = useRef(false);
+  const participantsCountRef = useRef(-1);
+  const activeEventRef = useRef(null);
 
   const handleLoaChange = (staffId, value) => {
     setLoaOverrides(prev => ({ ...prev, [staffId]: value }));
   };
 
-  const loadData = async (isFirstLoad = false) => {
-    const activeEvent = await getEvent(eventId);
-    setEvent(activeEvent);
-    if (activeEvent) {
-      const p = await getParticipants(activeEvent.id);
-      setParticipants(p);
-      if (!remarksInitialized.current || isFirstLoad) {
-        setRemarks(activeEvent.remarks || '');
-        if (activeEvent.training_type || activeEvent.trainingType) {
-          setTrainingType(activeEvent.training_type || activeEvent.trainingType);
-        } else {
-          setTrainingType('Initial');
+  const loadData = async (isFullRefresh = false) => {
+    // Pause background polling immediately to eliminate wasted Vercel/Supabase egress & compute
+    if (!isFullRefresh && document.hidden) return;
+
+    // 1. Fetch full event details if first load, full refresh, or if event wasn't active yet
+    if (isFullRefresh || !activeEventRef.current || !activeEventRef.current.isActive) {
+      const activeEvent = await getEvent(eventId);
+      if (activeEvent) {
+        setEvent(activeEvent);
+        activeEventRef.current = activeEvent;
+        if (!remarksInitialized.current || isFullRefresh) {
+          setRemarks(activeEvent.remarks || '');
+          if (activeEvent.training_type || activeEvent.trainingType) {
+            setTrainingType(activeEvent.training_type || activeEvent.trainingType);
+          } else {
+            setTrainingType('Initial');
+          }
+          remarksInitialized.current = true;
         }
-        remarksInitialized.current = true;
       }
+    }
+
+    // 2. Ultra-lightweight participant check: query HEAD count (0 bytes payload)
+    const currentCount = await getParticipantsCount(eventId);
+
+    // Only download full participant base64 signatures if count changed or on full refresh
+    if (isFullRefresh || currentCount !== participantsCountRef.current) {
+      const p = await getParticipants(eventId);
+      setParticipants(p);
+      participantsCountRef.current = p.length;
     }
   };
 
@@ -44,14 +63,43 @@ const EventDashboard = () => {
       setCurrentUser(u);
     };
     fetchAdmin();
-    // Simulate real-time updates by polling every 5 seconds for participants & event status
+
+    // Smart polling: checks every 10 seconds ONLY when tab is visible
     const interval = setInterval(() => {
-      loadData(false);
-    }, 5000);
-    return () => clearInterval(interval);
+      if (!document.hidden) {
+        loadData(false);
+      }
+    }, 10000);
+
+    // When returning to tab, immediately check once
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        loadData(false);
+        setNow(new Date());
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    // Tick clock every 10s only when tab is active
+    const clockInterval = setInterval(() => {
+      if (!document.hidden) {
+        setNow(new Date());
+      }
+    }, 10000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(clockInterval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [eventId]);
 
   const handleActivate = async () => {
+    if (isInstructorLocked) {
+      alert(`Activation is locked until 30 minutes before the scheduled start time (${lockStatus.formattedUnlockTime}).`);
+      return;
+    }
+
     const selectedTrainingType = event.type === 'Training' ? (trainingType || 'Initial') : null;
     const leaderTitle = event.type === 'Training' ? 'INSTRUCTOR' : 'CHAIRPERSON';
 
@@ -131,6 +179,10 @@ const EventDashboard = () => {
   const isSystemAdmin = currentUser?.multi_roles?.some(r => r.toLowerCase() === 'system administrator');
   const canActivate = isSystemAdmin || isAssignedLeader;
 
+  const lockStatus = getActivationLockStatus(event, 30, now);
+  // Activation is locked for assigned instructors for Training sessions until 30 minutes before start time
+  const isInstructorLocked = event.type === 'Training' && !isSystemAdmin && lockStatus.isLocked;
+
   return (
     <div className="animate-fade-in" style={{ width: '100%', margin: '0 auto' }}>
       <div className="grid grid-cols-2">
@@ -179,8 +231,94 @@ const EventDashboard = () => {
         {/* Activation & Session Card */}
         <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           {!event.isActive ? (
-            canActivate ? (
+            isInstructorLocked ? (
+              <div style={{ width: '100%', padding: '0.75rem 0.25rem' }}>
+                <div style={{
+                  width: '64px',
+                  height: '64px',
+                  borderRadius: '18px',
+                  background: 'rgba(234, 179, 8, 0.12)',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 1.1rem',
+                  color: '#EAB308',
+                  boxShadow: '0 8px 24px rgba(234, 179, 8, 0.15)'
+                }}>
+                  <Lock size={30} />
+                </div>
+                <h3 style={{ fontSize: '1.35rem', marginBottom: '0.4rem', color: 'var(--aa-white)' }}>
+                  Training Activation Locked
+                </h3>
+                <div style={{ marginBottom: '1.1rem' }}>
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.4rem',
+                    background: 'rgba(234, 179, 8, 0.15)',
+                    color: '#FDE047',
+                    border: '1px solid rgba(234, 179, 8, 0.35)',
+                    padding: '0.35rem 0.85rem',
+                    borderRadius: '50px',
+                    fontSize: '0.82rem',
+                    fontWeight: '700'
+                  }}>
+                    <Clock size={14} /> Opens in {lockStatus.timeRemainingStr}
+                  </span>
+                </div>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.86rem', maxWidth: '380px', margin: '0 auto 1.25rem', lineHeight: '1.5' }}>
+                  To ensure training session validity, digital verification & activation for assigned instructors opens strictly <strong>30 minutes before</strong> scheduled start time.
+                </p>
+
+                <div style={{
+                  background: 'rgba(255, 255, 255, 0.03)',
+                  border: '1px solid var(--border-color)',
+                  padding: '1rem 1.15rem',
+                  borderRadius: '14px',
+                  textAlign: 'left',
+                  marginBottom: '1.25rem',
+                  fontSize: '0.84rem'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem', flexWrap: 'wrap', gap: '0.25rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Scheduled Start:</span>
+                    <strong style={{ color: 'var(--aa-white)' }}>{event.date} • {event.time}</strong>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.25rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Activation Unlocks:</span>
+                    <strong style={{ color: '#EAB308' }}>{lockStatus.formattedUnlockTime}</strong>
+                  </div>
+                </div>
+
+                <button disabled className="btn btn-outline" style={{ width: '100%', padding: '0.85rem', fontSize: '0.95rem', opacity: 0.5, cursor: 'not-allowed', borderColor: 'rgba(255,255,255,0.12)' }}>
+                  <Lock size={15} style={{ marginRight: '0.45rem' }} /> Locked Until 30 Mins Before Start
+                </button>
+              </div>
+            ) : canActivate ? (
               <div style={{ width: '100%' }}>
+                {isSystemAdmin && event.type === 'Training' && lockStatus.isLocked && (
+                  <div style={{
+                    background: 'rgba(59, 130, 246, 0.08)',
+                    border: '1px solid rgba(59, 130, 246, 0.3)',
+                    borderRadius: '12px',
+                    padding: '0.85rem 1rem',
+                    marginBottom: '1.25rem',
+                    textAlign: 'left',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '0.75rem'
+                  }}>
+                    <ShieldAlert size={20} style={{ color: '#60A5FA', flexShrink: 0, marginTop: '2px' }} />
+                    <div style={{ fontSize: '0.82rem' }}>
+                      <strong style={{ color: '#93C5FD', display: 'block', marginBottom: '0.2rem' }}>
+                        Admin Override Active
+                      </strong>
+                      <span style={{ color: 'var(--text-secondary)', lineHeight: '1.4' }}>
+                        Activation is locked for instructors until <strong>{lockStatus.formattedUnlockTime}</strong> (30 min before session). As System Administrator, you may proceed with early activation.
+                      </span>
+                    </div>
+                  </div>
+                )}
                 <h3 style={{ fontSize: '1.35rem', marginBottom: '0.5rem' }}>Activation Required</h3>
                 <div className="glass-card" style={{ background: 'rgba(16, 185, 129, 0.05)', border: '1px solid rgba(16, 185, 129, 0.2)', textAlign: 'center', padding: '1.25rem', marginBottom: '1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.6rem', color: 'var(--accent-success)', marginBottom: '0.35rem' }}>
@@ -273,6 +411,11 @@ const EventDashboard = () => {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                   This event is waiting for the assigned {leaderLabel.toLowerCase()} to select training type and digitally acknowledge & activate it.
                 </p>
+                {event.type === 'Training' && lockStatus.isLocked && (
+                  <div style={{ marginTop: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: '#EAB308', background: 'rgba(234, 179, 8, 0.1)', padding: '0.25rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', border: '1px solid rgba(234, 179, 8, 0.25)' }}>
+                    <Lock size={12} /> Unlocks 30 minutes before start ({lockStatus.formattedUnlockTime})
+                  </div>
+                )}
               </div>
             )
           ) : (
@@ -398,7 +541,7 @@ const EventDashboard = () => {
             <span className="badge badge-blue">{participants.length} Scanned</span>
           </div>
           <div style={{ display: 'flex', gap: '0.6rem' }}>
-            <button onClick={loadData} className="btn btn-outline" style={{ padding: '0.55rem 0.85rem' }} title="Refresh Data">
+            <button onClick={() => loadData(true)} className="btn btn-outline" style={{ padding: '0.55rem 0.85rem' }} title="Refresh Data">
               <RefreshCw size={16} />
             </button>
             <button onClick={handleGenerateSoftCopy} disabled={participants.length === 0} className="btn btn-success" style={{ padding: '0.55rem 1rem' }}>
