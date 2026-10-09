@@ -346,15 +346,24 @@ export const getAllEvents = async () => {
   if (error) return [];
 
   return data.map(e => {
-    let displayTime = e.event_time ? e.event_time.substring(0, 5) : '';
+    let rawTime = e.event_time ? e.event_time.trim() : '';
     let cleanRemarks = e.remarks || '';
-    if (e.event_type === 'Training' && cleanRemarks.includes('[END:')) {
-      const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
-      if (match && match[1]) {
-        displayTime = `${displayTime} - ${match[1].trim()}`;
-        cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
+    let displayTime = '';
+
+    if (rawTime.includes(' - ') || rawTime.includes(' to ')) {
+      displayTime = rawTime;
+    } else if (rawTime) {
+      const startTime = rawTime.substring(0, 5);
+      if (cleanRemarks.includes('[END:')) {
+        const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
+        displayTime = match && match[1] ? `${startTime} - ${match[1].trim().substring(0, 5)}` : (e.event_type === 'Training' ? `${startTime} - 17:00` : startTime);
+      } else if (e.event_type === 'Training') {
+        displayTime = `${startTime} - 17:00`;
+      } else {
+        displayTime = startTime;
       }
     }
+    cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
 
     return {
       ...e,
@@ -374,25 +383,23 @@ export const getAllEvents = async () => {
 };
 
 export const saveEvent = async (eventData) => {
-  // Ensure event_time is valid PostgreSQL TIME format (e.g. "09:00")
-  let cleanTime = (eventData.startTime || eventData.time || '09:00').toString().trim();
-  if (cleanTime.includes(' - ')) {
-    cleanTime = cleanTime.split(' - ')[0].trim();
-  }
-  if (cleanTime.includes(' to ')) {
-    cleanTime = cleanTime.split(' to ')[0].trim();
-  }
-  cleanTime = cleanTime.substring(0, 5);
-
-  let eventRemarks = eventData.remarks || '';
-  if (eventData.type === 'Training' && eventData.endTime) {
-    const endTag = `[END:${eventData.endTime.substring(0, 5)}]`;
-    if (!eventRemarks.includes('[END:')) {
-      eventRemarks = eventRemarks ? `${eventRemarks}\n${endTag}` : endTag;
+  // Preserve start and end time directly in event_time text column (e.g. "09:00 - 17:00")
+  let formattedTime = '';
+  if (eventData.type === 'Training') {
+    const start = (eventData.startTime || (eventData.time ? eventData.time.split(' - ')[0] : '09:00')).trim().substring(0, 5);
+    const end = (eventData.endTime || (eventData.time ? eventData.time.split(' - ')[1] : '17:00') || '17:00').trim().substring(0, 5);
+    formattedTime = `${start} - ${end}`;
+  } else {
+    if (eventData.startTime && eventData.endTime) {
+      formattedTime = `${eventData.startTime.trim().substring(0, 5)} - ${eventData.endTime.trim().substring(0, 5)}`;
+    } else if (eventData.time && (eventData.time.includes(' - ') || eventData.time.includes(' to '))) {
+      formattedTime = eventData.time.trim();
     } else {
-      eventRemarks = eventRemarks.replace(/\[END:[^\]]+\]/, endTag);
+      formattedTime = (eventData.startTime || eventData.time || '09:00').toString().trim().substring(0, 5);
     }
   }
+
+  let eventRemarks = (eventData.remarks || '').replace(/\[END:[^\]]+\]\s*/g, '').trim();
 
   // 0. Auto-generate next sequential event_code by checking only latest 5 events (saves scanning entire table)
   const { data: latestEvents } = await supabase
@@ -424,7 +431,7 @@ export const saveEvent = async (eventData) => {
       subject: eventData.name,
       event_type: eventData.type,
       event_date: eventData.date,
-      event_time: cleanTime,
+      event_time: formattedTime,
       venue: eventData.venue,
       room: eventData.room,
       department: eventData.department,
@@ -477,34 +484,32 @@ export const saveEvent = async (eventData) => {
 };
 
 export const updateEventInfo = async (eventId, eventData) => {
-  let cleanTime = (eventData.startTime || eventData.time || '09:00').toString().trim();
-  if (cleanTime.includes(' - ')) {
-    cleanTime = cleanTime.split(' - ')[0].trim();
+  // Preserve start and end time directly in event_time text column (e.g. "09:00 - 17:00")
+  let formattedTime = '';
+  if (eventData.type === 'Training') {
+    const start = (eventData.startTime || (eventData.time ? eventData.time.split(' - ')[0] : '09:00')).trim().substring(0, 5);
+    const end = (eventData.endTime || (eventData.time ? eventData.time.split(' - ')[1] : '17:00') || '17:00').trim().substring(0, 5);
+    formattedTime = `${start} - ${end}`;
+  } else {
+    if (eventData.startTime && eventData.endTime) {
+      formattedTime = `${eventData.startTime.trim().substring(0, 5)} - ${eventData.endTime.trim().substring(0, 5)}`;
+    } else if (eventData.time && (eventData.time.includes(' - ') || eventData.time.includes(' to '))) {
+      formattedTime = eventData.time.trim();
+    } else {
+      formattedTime = (eventData.startTime || eventData.time || '09:00').toString().trim().substring(0, 5);
+    }
   }
-  if (cleanTime.includes(' to ')) {
-    cleanTime = cleanTime.split(' to ')[0].trim();
-  }
-  cleanTime = cleanTime.substring(0, 5);
 
   let eventRemarks = eventData.remarks;
-  if (eventData.type === 'Training' && eventData.endTime) {
-    const endTag = `[END:${eventData.endTime.substring(0, 5)}]`;
-    if (eventRemarks) {
-      if (!eventRemarks.includes('[END:')) {
-        eventRemarks = `${eventRemarks}\n${endTag}`;
-      } else {
-        eventRemarks = eventRemarks.replace(/\[END:[^\]]+\]/, endTag);
-      }
-    } else {
-      eventRemarks = endTag;
-    }
+  if (eventRemarks !== undefined) {
+    eventRemarks = eventRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
   }
 
   const updatePayload = {
     subject: eventData.name,
     event_type: eventData.type,
     event_date: eventData.date,
-    event_time: cleanTime,
+    event_time: formattedTime,
     venue: eventData.venue,
     room: eventData.room,
     department: eventData.department
@@ -583,15 +588,24 @@ export const getEvent = async (id) => {
 
   if (error || !data) return null;
 
-  let displayTime = data.event_time ? data.event_time.substring(0, 5) : '';
+  let rawTime = data.event_time ? data.event_time.trim() : '';
   let cleanRemarks = data.remarks || '';
-  if (data.event_type === 'Training' && cleanRemarks.includes('[END:')) {
-    const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
-    if (match && match[1]) {
-      displayTime = `${displayTime} - ${match[1].trim()}`;
-      cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
+  let displayTime = '';
+
+  if (rawTime.includes(' - ') || rawTime.includes(' to ')) {
+    displayTime = rawTime;
+  } else if (rawTime) {
+    const startTime = rawTime.substring(0, 5);
+    if (cleanRemarks.includes('[END:')) {
+      const match = cleanRemarks.match(/\[END:([^\]]+)\]/);
+      displayTime = match && match[1] ? `${startTime} - ${match[1].trim().substring(0, 5)}` : (data.event_type === 'Training' ? `${startTime} - 17:00` : startTime);
+    } else if (data.event_type === 'Training') {
+      displayTime = `${startTime} - 17:00`;
+    } else {
+      displayTime = startTime;
     }
   }
+  cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
 
   return {
     ...data,
@@ -843,10 +857,18 @@ export const getTrainingAnalytics = async (filters = {}) => {
       if (eventMY !== filters.monthYear) return;
     }
 
-    let displayTime = e.event_time ? e.event_time.substring(0, 5) : '';
-    if (e.remarks && e.remarks.includes('[END:')) {
-      const m = e.remarks.match(/\[END:([^\]]+)\]/);
-      if (m && m[1]) displayTime = `${displayTime} - ${m[1].trim()}`;
+    let displayTime = '';
+    const rawTime = e.event_time ? e.event_time.trim() : '';
+    if (rawTime.includes(' - ') || rawTime.includes(' to ')) {
+      displayTime = rawTime;
+    } else if (rawTime) {
+      const s = rawTime.substring(0, 5);
+      if (e.remarks && e.remarks.includes('[END:')) {
+        const m = e.remarks.match(/\[END:([^\]]+)\]/);
+        displayTime = m && m[1] ? `${s} - ${m[1].trim().substring(0, 5)}` : `${s} - 17:00`;
+      } else {
+        displayTime = `${s} - 17:00`;
+      }
     }
 
     const duration = parseHours(e.event_time, e.remarks);
