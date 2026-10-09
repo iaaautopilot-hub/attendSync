@@ -41,7 +41,7 @@ export const getAllUsers = async (forceRefresh = false) => {
   // Exclude password and heavy base64 signature_data from bulk user list to save egress
   const { data, error } = await supabase
     .from('users')
-    .select('id, staff_id, full_name, email, username, loa_no, must_change_password, multi_roles, role_id, roles(role_name), rank(rank_name), hub(hub_name)');
+    .select('staff_id, full_name, email, username, loa_no, must_change_password, multi_roles, role_id, roles(role_name), rank(rank_name), hub(hub_name)');
 
   if (error) {
     console.error('Error fetching users:', error);
@@ -56,6 +56,7 @@ export const getAllUsers = async (forceRefresh = false) => {
 
     return {
       ...u,
+      id: u.staff_id,
       name: u.full_name,
       multi_roles: u.multi_roles && u.multi_roles.length > 0 ? u.multi_roles : [legacyRole],
       role: (u.multi_roles && u.multi_roles.length > 0) ? u.multi_roles[0] : legacyRole,
@@ -76,7 +77,7 @@ export const validateLogin = async (username, password) => {
   console.log('Attempting login for:', username);
   const { data, error } = await supabase
     .from('users')
-    .select('id, staff_id, full_name, username, password, role_id, multi_roles, roles(role_name)')
+    .select('staff_id, full_name, username, password, role_id, multi_roles, roles(role_name)')
     .ilike('username', username);
 
   if (error || !data || data.length === 0) {
@@ -155,7 +156,7 @@ export const getCurrentUser = async (forceRefresh = false) => {
   // Select only lightweight identity fields - never fetch base64 signature_data or password here
   const { data, error } = await supabase
     .from('users')
-    .select('id, staff_id, full_name, email, username, loa_no, multi_roles, role_id, roles(role_name)')
+    .select('staff_id, full_name, email, username, loa_no, multi_roles, role_id, roles(role_name)')
     .eq('email', email)
     .limit(1);
 
@@ -171,6 +172,7 @@ export const getCurrentUser = async (forceRefresh = false) => {
 
   cachedCurrentUser = {
     ...user,
+    id: user.staff_id,
     name: user.full_name,
     staff_id: user.staff_id,
     multi_roles: user.multi_roles && user.multi_roles.length > 0 ? user.multi_roles : [legacyRole],
