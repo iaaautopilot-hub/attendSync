@@ -78,14 +78,20 @@ export const exportAttendancePDF = async (event, participants, admin) => {
     const year = event.date ? new Date(event.date).getFullYear() : new Date().getFullYear();
     
     // Safely extract 5-digit sequential number from event.event_code (e.g. EV-0275 -> 00275)
-    let numericId = '00001';
+    let numericId = '';
     if (event.event_code) {
-      const match = event.event_code.match(/\d+/);
-      if (match) {
-        numericId = match[0].padStart(5, '0');
+      const digits = event.event_code.replace(/\D/g, '');
+      if (digits && parseInt(digits, 10) > 0) {
+        numericId = digits.padStart(5, '0');
       }
-    } else if (event.id && !isNaN(event.id)) {
-      numericId = String(event.id).padStart(5, '0');
+    }
+    if (!numericId || numericId === '00000') {
+      if (event.id) {
+        const hash = Math.abs(event.id.toString().split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)) % 100000;
+        numericId = String(hash || 1).padStart(5, '0');
+      } else {
+        numericId = '00001';
+      }
     }
 
     doc.text(`Rec. No. : IAA/${deptCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${year}/${numericId}`, margin + 131, headerTop + 7);

@@ -1,5 +1,6 @@
 import { supabase } from './lib/supabase';
 import bcrypt from 'bcryptjs';
+import { logSystemEvent } from './utils/systemLogger';
 
 const AUTH_KEY = 'attendance_app_user';
 
@@ -365,8 +366,21 @@ export const getAllEvents = async () => {
     }
     cleanRemarks = cleanRemarks.replace(/\[END:[^\]]+\]\s*/g, '').trim();
 
+    // Guard against missing event_code to ensure 00000 is never generated
+    let eventCode = e.event_code;
+    if (!eventCode) {
+      const hash = Math.abs((e.id || '').split('').reduce((acc, char) => (acc << 5) - acc + char.charCodeAt(0), 0)) % 10000;
+      eventCode = `EV-${String(hash || 1).padStart(4, '0')}`;
+      logSystemEvent({
+        level: 'WARN',
+        action: 'MISSING_EVENT_CODE_DETECTED',
+        details: `Event ${e.id} (${e.subject}) had null event_code. Fallback code ${eventCode} assigned.`
+      });
+    }
+
     return {
       ...e,
+      event_code: eventCode,
       name: e.subject,
       date: e.event_date,
       time: displayTime,
@@ -401,13 +415,13 @@ export const saveEvent = async (eventData) => {
 
   let eventRemarks = (eventData.remarks || '').replace(/\[END:[^\]]+\]\s*/g, '').trim();
 
-  // 0. Auto-generate next sequential event_code by checking only latest 5 events (saves scanning entire table)
+  // 0. Auto-generate next sequential event_code by checking latest 10 events (saves scanning entire table)
   const { data: latestEvents } = await supabase
     .from('events')
     .select('event_code')
     .not('event_code', 'is', null)
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(10);
 
   let maxNum = 0;
   if (latestEvents) {
@@ -445,8 +459,20 @@ export const saveEvent = async (eventData) => {
 
   if (eventErr) {
     console.error('Error saving event:', eventErr);
+    logSystemEvent({
+      level: 'ERROR',
+      action: 'EVENT_CREATION_FAILED',
+      details: `Failed to create event ${eventData.name}: ${eventErr.message || JSON.stringify(eventErr)}`
+    });
     throw eventErr;
   }
+
+  logSystemEvent({
+    level: 'INFO',
+    action: 'EVENT_CREATED',
+    details: `Created event ${nextEventCode} ("${eventData.name}") for ${eventData.department || 'Flight Operation'}`,
+    user: { staff_id: eventData.created_by }
+  });
 
   // 2. Assign leaders in a single batch query (eliminates N+1 loop)
   if (eventData.leaders && eventData.leaders.length > 0) {
@@ -676,6 +702,13 @@ export const updateEventRemarks = async (id, remarks, trainingType = null) => {
 
 export const clearEvent = async (id) => {
   const { error } = await supabase.from('events').delete().eq('id', id);
+  if (!error) {
+    logSystemEvent({
+      level: 'WARN',
+      action: 'EVENT_DELETED',
+      details: `Permanently deleted event ID: ${id}`
+    });
+  }
   return !error;
 };
 

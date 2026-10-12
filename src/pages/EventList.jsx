@@ -1,9 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAllEvents, clearEvent, getCurrentUser, getAllDepartments, updateEventInfo, getUsersByRole } from '../db';
-import { Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock, Plus, Lock } from 'lucide-react';
+import { 
+  Calendar, Trash2, ChevronRight, Target, Filter, Search, Edit, X, Users, Eye, Clock, Plus, Lock,
+  Activity, CalendarDays, RefreshCw, Layers, ShieldCheck, CheckCircle2, AlertCircle, Info, Tag, RotateCcw
+} from 'lucide-react';
 import { parseEventTime, calculateDurationHours, formatDurationDisplay, getActivationLockStatus } from '../utils/timeUtils';
 import { canAdminAccessDepartment, getAllowedDepartmentsForUser, canUserViewOrEditEvent, isFlightOperationIntegrated } from '../utils/departmentUtils';
+import { formatEventRecordNumber } from '../utils/recordUtils';
+import { getSystemLogs, clearSystemLogs, logSystemEvent } from '../utils/systemLogger';
 
 const EventList = () => {
   const [events, setEvents] = useState([]);
@@ -11,11 +16,20 @@ const EventList = () => {
   const [deptCodeMap, setDeptCodeMap] = useState({});
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState('ALL');
+  const [selectedType, setSelectedType] = useState('ALL');
+  const [selectedDate, setSelectedDate] = useState('');
+  const [datePreset, setDatePreset] = useState('ALL'); // 'ALL' | 'TODAY' | 'UPCOMING' | 'PAST'
   const [searchKeyword, setSearchKeyword] = useState('');
   const [editingEvent, setEditingEvent] = useState(null);
   const [editFormData, setEditFormData] = useState(null);
   const [availableLeaders, setAvailableLeaders] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+
+  // System Logs Modal States
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [systemLogs, setSystemLogs] = useState([]);
+  const [logsFilter, setLogsFilter] = useState('ALL');
+  const [logsSearch, setLogsSearch] = useState('');
 
   const loadEvents = async () => {
     const u = await getCurrentUser();
@@ -58,7 +72,23 @@ const EventList = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchKeyword, selectedDepartment]);
+  }, [searchKeyword, selectedDepartment, selectedType, selectedDate, datePreset]);
+
+  const openLogsModal = () => {
+    setSystemLogs(getSystemLogs());
+    setShowLogsModal(true);
+  };
+
+  const handleClearLogs = () => {
+    if (window.confirm("Clear local system logs?")) {
+      clearSystemLogs();
+      setSystemLogs([]);
+    }
+  };
+
+  const handleRefreshLogs = () => {
+    setSystemLogs(getSystemLogs());
+  };
 
   const handleDelete = async (id, e) => {
     e.preventDefault();
@@ -137,11 +167,52 @@ const EventList = () => {
     ...events.map(e => e.department).filter(Boolean)
   ])).sort();
 
+  const availableEventTypes = Array.from(new Set(events.map(e => e.type || e.event_type).filter(Boolean))).sort();
+  const todayStr = new Date().toISOString().split('T')[0];
+
   const filteredEvents = events.filter(e => {
+    // 1. Department filter
     const matchDept = selectedDepartment === 'ALL' || e.department === selectedDepartment;
-    const matchSearch = !searchKeyword || e.name?.toLowerCase().includes(searchKeyword.toLowerCase());
-    return matchDept && matchSearch;
+    
+    // 2. Keyword search
+    const query = searchKeyword.toLowerCase().trim();
+    const matchSearch = !query || 
+      e.name?.toLowerCase().includes(query) ||
+      (e.event_code && e.event_code.toLowerCase().includes(query)) ||
+      (e.leaders && e.leaders.some(l => l.toLowerCase().includes(query))) ||
+      (e.venue && e.venue.toLowerCase().includes(query)) ||
+      (e.room && e.room.toLowerCase().includes(query));
+
+    // 3. Event Type filter
+    const eventType = (e.type || e.event_type || '');
+    const matchType = selectedType === 'ALL' || eventType.toLowerCase() === selectedType.toLowerCase();
+
+    // 4. Event Date filter
+    const eventDateStr = e.date || e.event_date || '';
+    let matchDate = true;
+    if (selectedDate) {
+      matchDate = eventDateStr === selectedDate;
+    } else if (datePreset === 'TODAY') {
+      matchDate = eventDateStr === todayStr;
+    } else if (datePreset === 'UPCOMING') {
+      matchDate = eventDateStr >= todayStr;
+    } else if (datePreset === 'PAST') {
+      matchDate = eventDateStr < todayStr;
+    }
+
+    return matchDept && matchSearch && matchType && matchDate;
   });
+
+  const handleResetFilters = () => {
+    setSelectedDepartment('ALL');
+    setSelectedType('ALL');
+    setSelectedDate('');
+    setDatePreset('ALL');
+    setSearchKeyword('');
+    setCurrentPage(1);
+  };
+
+  const isFilterActive = selectedDepartment !== 'ALL' || selectedType !== 'ALL' || selectedDate !== '' || datePreset !== 'ALL' || searchKeyword.trim() !== '';
 
   const itemsPerPage = 10;
   const totalPages = Math.ceil(filteredEvents.length / itemsPerPage);
@@ -162,96 +233,274 @@ const EventList = () => {
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', margin: 0 }}>Manage and view attendance records for your flights and training</p>
           </div>
         </div>
-        {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
-          <Link to="/" className="btn btn-primary" style={{ padding: '0.65rem 1.25rem' }}>
-            <Plus size={18} /> New Event
-          </Link>
-        )}
-      </div>
-
-      {/* Search Input */}
-      <div style={{ marginBottom: '1.25rem' }}>
-        <div className="glass-card" style={{ display: 'flex', alignItems: 'center', padding: '0.75rem 1.25rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-          <Search size={18} style={{ color: 'var(--text-secondary)', marginRight: '0.75rem', flexShrink: 0 }} />
-          <input
-            type="text"
-            placeholder="Search event name..."
-            value={searchKeyword}
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.95rem', outline: 'none' }}
-          />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', flexWrap: 'wrap' }}>
+          {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
+            <button 
+              onClick={openLogsModal}
+              className="btn btn-outline" 
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.45rem', padding: '0.65rem 1.1rem', borderRadius: '12px', fontSize: '0.85rem' }}
+              title="View zero-egress system logs & audit diagnostics"
+            >
+              <Activity size={17} style={{ color: 'var(--aa-red)' }} />
+              System Logs
+            </button>
+          )}
+          {user?.multi_roles?.some(r => ['admin', 'system administrator'].includes(r.toLowerCase())) && (
+            <Link to="/" className="btn btn-primary" style={{ padding: '0.65rem 1.25rem' }}>
+              <Plus size={18} /> New Event
+            </Link>
+          )}
         </div>
       </div>
 
-      {/* Department Filter Chips */}
-      {availableDepartments.length > 0 && events.length > 0 && (
-        <div className="glass-card" style={{ padding: '1rem 1.25rem', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <Filter size={16} style={{ color: 'var(--aa-red)' }} />
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--aa-white)' }}>Department Filter</span>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-              Showing {filteredEvents.length} of {events.length} events
-            </span>
+      {/* Unified Filter & Search Bar */}
+      <div className="glass-card" style={{ padding: '1.25rem', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.02)' }}>
+        {/* Top Filter Controls: Search & Date Picker */}
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+          {/* Keyword Search */}
+          <div style={{ flex: '1 1 240px', display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.55rem 0.85rem' }}>
+            <Search size={16} style={{ color: 'var(--text-secondary)', marginRight: '0.5rem', flexShrink: 0 }} />
+            <input
+              type="text"
+              placeholder="Search event name, code, venue, leader..."
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.9rem', outline: 'none' }}
+            />
+            {searchKeyword && (
+              <button 
+                onClick={() => setSearchKeyword('')} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.2rem', display: 'flex' }}
+                title="Clear search"
+              >
+                <X size={15} />
+              </button>
+            )}
           </div>
 
-          <div className="filter-chips-container">
-            <button
-              onClick={() => setSelectedDepartment('ALL')}
-              className={`btn filter-chip ${selectedDepartment === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
-              style={{
-                padding: '0.4rem 0.9rem',
-                fontSize: '0.8rem',
-                minHeight: '36px',
-                borderRadius: '50px',
-                background: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'transparent',
-                borderColor: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'var(--border-color)',
-                color: selectedDepartment === 'ALL' ? '#fff' : 'var(--text-secondary)'
+          {/* Specific Date Picker */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '12px', padding: '0.45rem 0.75rem' }}>
+            <Calendar size={16} style={{ color: 'var(--aa-red)', flexShrink: 0 }} />
+            <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>Date:</span>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setDatePreset('ALL');
               }}
+              style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', outline: 'none', colorScheme: 'dark', cursor: 'pointer' }}
+            />
+            {selectedDate && (
+              <button 
+                onClick={() => setSelectedDate('')} 
+                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.2rem', display: 'flex' }}
+                title="Clear date filter"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+
+          {/* Reset Filters Button */}
+          {isFilterActive && (
+            <button
+              onClick={handleResetFilters}
+              className="btn btn-outline"
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', padding: '0.5rem 0.9rem', fontSize: '0.8rem', borderRadius: '10px', color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+              title="Reset all active filters"
             >
-              All ({events.length})
+              <RotateCcw size={14} /> Reset Filters
             </button>
-            {availableDepartments.map(deptName => {
-              const count = events.filter(e => e.department === deptName).length;
-              const isSelected = selectedDepartment === deptName;
-              return (
+          )}
+        </div>
+
+        {/* Filter Chips Groups */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          {/* 1. Event Type Filter */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.45rem' }}>
+              <Layers size={14} style={{ color: 'var(--aa-red)' }} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Event Type
+              </span>
+            </div>
+            <div className="filter-chips-container" style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setSelectedType('ALL')}
+                className={`btn filter-chip ${selectedType === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
+                style={{
+                  padding: '0.35rem 0.85rem',
+                  fontSize: '0.78rem',
+                  minHeight: '32px',
+                  borderRadius: '50px',
+                  background: selectedType === 'ALL' ? 'var(--aa-red)' : 'transparent',
+                  borderColor: selectedType === 'ALL' ? 'var(--aa-red)' : 'var(--border-color)',
+                  color: selectedType === 'ALL' ? '#fff' : 'var(--text-secondary)'
+                }}
+              >
+                All Types ({events.length})
+              </button>
+              {availableEventTypes.map(t => {
+                const count = events.filter(e => (e.type || e.event_type) === t).length;
+                const isSelected = selectedType === t;
+                const badgeColor = t === 'Meeting' ? '#60A5FA' : '#C084FC';
+                return (
+                  <button
+                    key={t}
+                    onClick={() => setSelectedType(t)}
+                    className={`btn filter-chip ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      fontSize: '0.78rem',
+                      minHeight: '32px',
+                      borderRadius: '50px',
+                      background: isSelected ? 'var(--aa-red)' : 'transparent',
+                      borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
+                      color: isSelected ? '#fff' : 'var(--text-secondary)'
+                    }}
+                  >
+                    <span style={{ display: 'inline-block', width: '7px', height: '7px', borderRadius: '50%', background: isSelected ? '#fff' : badgeColor, marginRight: '0.35rem' }} />
+                    {t} ({count})
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Event Date Presets */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.45rem' }}>
+              <CalendarDays size={14} style={{ color: 'var(--aa-red)' }} />
+              <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                Event Date
+              </span>
+            </div>
+            <div className="filter-chips-container" style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+              {[
+                { id: 'ALL', label: 'All Dates', count: events.length },
+                { id: 'TODAY', label: 'Today', count: events.filter(e => (e.date || e.event_date) === todayStr).length },
+                { id: 'UPCOMING', label: 'Upcoming', count: events.filter(e => (e.date || e.event_date) >= todayStr).length },
+                { id: 'PAST', label: 'Past', count: events.filter(e => (e.date || e.event_date) < todayStr).length }
+              ].map(preset => {
+                const isSelected = !selectedDate && datePreset === preset.id;
+                return (
+                  <button
+                    key={preset.id}
+                    onClick={() => {
+                      setDatePreset(preset.id);
+                      setSelectedDate('');
+                    }}
+                    className={`btn filter-chip ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                    style={{
+                      padding: '0.35rem 0.85rem',
+                      fontSize: '0.78rem',
+                      minHeight: '32px',
+                      borderRadius: '50px',
+                      background: isSelected ? 'var(--aa-red)' : 'transparent',
+                      borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
+                      color: isSelected ? '#fff' : 'var(--text-secondary)'
+                    }}
+                  >
+                    {preset.label} ({preset.count})
+                  </button>
+                );
+              })}
+              {selectedDate && (
+                <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: 'rgba(226, 22, 41, 0.2)', border: '1px solid var(--aa-red)', borderRadius: '50px', padding: '0.2rem 0.75rem', fontSize: '0.78rem', color: '#fff' }}>
+                  <span>Custom: {selectedDate}</span>
+                  <button onClick={() => setSelectedDate('')} style={{ background: 'transparent', border: 'none', color: '#fff', cursor: 'pointer', padding: 0, display: 'flex' }}>
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Department Filter Chips */}
+          {availableDepartments.length > 0 && events.length > 0 && (
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.45rem' }}>
+                <Filter size={14} style={{ color: 'var(--aa-red)' }} />
+                <span style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                  Department
+                </span>
+              </div>
+              <div className="filter-chips-container" style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
                 <button
-                  key={deptName}
-                  onClick={() => setSelectedDepartment(deptName)}
-                  className={`btn filter-chip ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                  onClick={() => setSelectedDepartment('ALL')}
+                  className={`btn filter-chip ${selectedDepartment === 'ALL' ? 'btn-primary' : 'btn-outline'}`}
                   style={{
-                    padding: '0.4rem 0.9rem',
-                    fontSize: '0.8rem',
-                    minHeight: '36px',
+                    padding: '0.35rem 0.85rem',
+                    fontSize: '0.78rem',
+                    minHeight: '32px',
                     borderRadius: '50px',
-                    background: isSelected ? 'var(--aa-red)' : 'transparent',
-                    borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
-                    color: isSelected ? '#fff' : 'var(--text-secondary)'
+                    background: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'transparent',
+                    borderColor: selectedDepartment === 'ALL' ? 'var(--aa-red)' : 'var(--border-color)',
+                    color: selectedDepartment === 'ALL' ? '#fff' : 'var(--text-secondary)'
                   }}
                 >
-                  {deptName} ({count})
+                  All ({events.length})
                 </button>
-              );
-            })}
-          </div>
+                {availableDepartments.map(deptName => {
+                  const count = events.filter(e => e.department === deptName).length;
+                  const isSelected = selectedDepartment === deptName;
+                  return (
+                    <button
+                      key={deptName}
+                      onClick={() => setSelectedDepartment(deptName)}
+                      className={`btn filter-chip ${isSelected ? 'btn-primary' : 'btn-outline'}`}
+                      style={{
+                        padding: '0.35rem 0.85rem',
+                        fontSize: '0.78rem',
+                        minHeight: '32px',
+                        borderRadius: '50px',
+                        background: isSelected ? 'var(--aa-red)' : 'transparent',
+                        borderColor: isSelected ? 'var(--aa-red)' : 'var(--border-color)',
+                        color: isSelected ? '#fff' : 'var(--text-secondary)'
+                      }}
+                    >
+                      {deptName} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Filter Status Strip */}
+        <div style={{ marginTop: '1rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>Showing <strong style={{ color: 'var(--aa-white)' }}>{filteredEvents.length}</strong> of {events.length} events</span>
+            {isFilterActive && (
+              <span style={{ fontSize: '0.75rem', color: 'var(--aa-red)', background: 'rgba(226, 22, 41, 0.1)', padding: '0.1rem 0.45rem', borderRadius: '4px' }}>
+                Filtered
+              </span>
+            )}
+          </div>
+          {totalPages > 1 && (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              Page {currentPage} of {totalPages}
+            </span>
+          )}
+        </div>
+      </div>
 
       {/* Events Table / Empty State */}
       {filteredEvents.length === 0 ? (
         <div className="empty-state">
           <img src="/icon.png" alt="Logo" style={{ width: '44px', height: '44px', objectFit: 'contain', marginBottom: '1rem', opacity: 0.6 }} />
           <h2>No Events Found</h2>
-          {selectedDepartment !== 'ALL' ? (
+          {isFilterActive ? (
             <>
-              <p>No events found for department <strong>{selectedDepartment}</strong>.</p>
+              <p>No events match your current filter selection.</p>
               <button
-                onClick={() => setSelectedDepartment('ALL')}
+                onClick={handleResetFilters}
                 className="btn btn-outline"
                 style={{ marginTop: '1rem', padding: '0.5rem 1.25rem' }}
               >
-                Show All Departments
+                Clear All Filters
               </button>
             </>
           ) : (
@@ -277,17 +526,7 @@ const EventList = () => {
                   <tr key={event.id}>
                     <td style={{ whiteSpace: 'nowrap' }}>
                       <span style={{ fontSize: '0.72rem', fontWeight: '700', background: 'rgba(255,255,255,0.05)', padding: '0.25rem 0.5rem', borderRadius: '6px', color: 'var(--aa-red)', border: '1px solid rgba(226, 22, 41, 0.2)', letterSpacing: '0.04em', display: 'inline-block' }}>
-                        { (() => {
-                          const dept = (event.department || 'Flight Operation');
-                          let dCode = deptCodeMap[dept];
-                          if (!dCode) {
-                            if (dept === 'Flight Operation' || dept === 'FOP') dCode = 'FOP';
-                            else if (isFlightOperationIntegrated(dept)) dCode = 'FOPI';
-                            else dCode = dept.split(' ').map(w => w[0]).join('').toUpperCase().substring(0, 4);
-                          }
-                          const nId = (event.event_code || '0').replace(/\D/g, '').padStart(5, '0');
-                          return `IAA/${dCode}/${event.type === 'Training' ? 'TRG' : 'MTG'}/${new Date(event.date).getFullYear()}/${nId}`;
-                        })() }
+                        {formatEventRecordNumber(event, deptCodeMap)}
                       </span>
                     </td>
                     <td>
@@ -564,6 +803,187 @@ const EventList = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* System Logs & Audit Modal */}
+      {showLogsModal && (
+        <div className="modal-overlay" onClick={() => setShowLogsModal(false)}>
+          <div 
+            className="modal-content glass-card animate-scale-up" 
+            style={{ maxWidth: '840px', width: '94%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', padding: '1.75rem' }} 
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ padding: '0.65rem', background: 'rgba(226, 22, 41, 0.15)', borderRadius: '12px', color: 'var(--aa-red)' }}>
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--aa-white)' }}>AttendSync System Logs</h3>
+                  <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    Diagnostics & audit trail (Zero-egress in-memory circular buffer • Supabase quota safe)
+                  </p>
+                </div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <button 
+                  onClick={handleRefreshLogs} 
+                  className="btn btn-outline" 
+                  style={{ padding: '0.4rem 0.65rem', fontSize: '0.78rem', minHeight: '32px' }}
+                  title="Refresh logs"
+                >
+                  <RefreshCw size={13} /> Refresh
+                </button>
+                <button 
+                  onClick={handleClearLogs} 
+                  className="btn btn-outline" 
+                  style={{ padding: '0.4rem 0.65rem', fontSize: '0.78rem', minHeight: '32px', color: '#F87171', borderColor: 'rgba(248, 113, 113, 0.3)' }}
+                  title="Clear local logs"
+                >
+                  <Trash2 size={13} /> Clear
+                </button>
+                <button 
+                  onClick={() => setShowLogsModal(false)} 
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0.25rem' }}
+                  aria-label="Close"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Filter & Search within logs */}
+            <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)', border: '1px solid var(--border-color)', borderRadius: '10px', padding: '0.45rem 0.75rem' }}>
+                <Search size={15} style={{ color: 'var(--text-secondary)', marginRight: '0.5rem', flexShrink: 0 }} />
+                <input
+                  type="text"
+                  placeholder="Filter logs by action or details..."
+                  value={logsSearch}
+                  onChange={(e) => setLogsSearch(e.target.value)}
+                  style={{ width: '100%', background: 'transparent', border: 'none', color: '#fff', fontSize: '0.85rem', outline: 'none' }}
+                />
+                {logsSearch && (
+                  <button onClick={() => setLogsSearch('')} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {['ALL', 'AUDIT', 'WARN', 'ERROR', 'INFO'].map(lvl => (
+                  <button
+                    key={lvl}
+                    onClick={() => setLogsFilter(lvl)}
+                    className="btn"
+                    style={{
+                      padding: '0.3rem 0.65rem',
+                      fontSize: '0.75rem',
+                      borderRadius: '8px',
+                      background: logsFilter === lvl ? (lvl === 'ERROR' ? '#EF4444' : lvl === 'WARN' ? '#F59E0B' : lvl === 'AUDIT' ? '#8B5CF6' : 'var(--aa-red)') : 'rgba(255,255,255,0.05)',
+                      color: logsFilter === lvl ? '#fff' : 'var(--text-secondary)',
+                      border: '1px solid',
+                      borderColor: logsFilter === lvl ? 'transparent' : 'var(--border-color)',
+                      minHeight: '32px'
+                    }}
+                  >
+                    {lvl}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Logs List Table */}
+            <div style={{ flex: 1, overflowY: 'auto', borderRadius: '10px', border: '1px solid var(--border-color)', background: 'rgba(0,0,0,0.25)', minHeight: '220px' }}>
+              {(() => {
+                const filteredLogs = systemLogs.filter(log => {
+                  const matchLvl = logsFilter === 'ALL' || log.level === logsFilter;
+                  const query = logsSearch.toLowerCase().trim();
+                  const matchQ = !query || 
+                    log.action?.toLowerCase().includes(query) || 
+                    log.details?.toLowerCase().includes(query) || 
+                    log.user?.toLowerCase().includes(query);
+                  return matchLvl && matchQ;
+                });
+
+                if (filteredLogs.length === 0) {
+                  return (
+                    <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-secondary)' }}>
+                      <Activity size={32} style={{ opacity: 0.3, marginBottom: '0.5rem' }} />
+                      <p style={{ margin: 0, fontSize: '0.85rem' }}>No system logs match the current filter criteria.</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid var(--border-color)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                        <th style={{ padding: '0.6rem 0.8rem', whiteSpace: 'nowrap' }}>Timestamp</th>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>Level</th>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>Action</th>
+                        <th style={{ padding: '0.6rem 0.8rem' }}>Details</th>
+                        <th style={{ padding: '0.6rem 0.8rem', whiteSpace: 'nowrap' }}>Actor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredLogs.map((log) => {
+                        const levelColors = {
+                          INFO: { bg: 'rgba(59, 130, 246, 0.15)', text: '#60A5FA', border: 'rgba(59, 130, 246, 0.3)' },
+                          WARN: { bg: 'rgba(245, 158, 11, 0.15)', text: '#FBBF24', border: 'rgba(245, 158, 11, 0.3)' },
+                          ERROR: { bg: 'rgba(239, 68, 68, 0.15)', text: '#F87171', border: 'rgba(239, 68, 68, 0.3)' },
+                          AUDIT: { bg: 'rgba(139, 92, 246, 0.15)', text: '#A78BFA', border: 'rgba(139, 92, 246, 0.3)' }
+                        };
+                        const c = levelColors[log.level] || levelColors.INFO;
+                        const timeStr = log.timestamp ? new Date(log.timestamp).toLocaleString() : '-';
+
+                        return (
+                          <tr key={log.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                            <td style={{ padding: '0.6rem 0.8rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: '0.74rem' }}>
+                              {timeStr}
+                            </td>
+                            <td style={{ padding: '0.6rem 0.8rem', whiteSpace: 'nowrap' }}>
+                              <span style={{ 
+                                padding: '0.15rem 0.45rem', 
+                                borderRadius: '4px', 
+                                fontSize: '0.68rem', 
+                                fontWeight: 700, 
+                                background: c.bg, 
+                                color: c.text, 
+                                border: `1px solid ${c.border}` 
+                              }}>
+                                {log.level}
+                              </span>
+                            </td>
+                            <td style={{ padding: '0.6rem 0.8rem', fontWeight: 600, color: 'var(--aa-white)', whiteSpace: 'nowrap' }}>
+                              {log.action}
+                            </td>
+                            <td style={{ padding: '0.6rem 0.8rem', color: 'var(--text-primary)', wordBreak: 'break-word', maxWidth: '340px' }}>
+                              {log.details}
+                            </td>
+                            <td style={{ padding: '0.6rem 0.8rem', whiteSpace: 'nowrap', color: 'var(--text-secondary)', fontSize: '0.74rem' }}>
+                              {log.user}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                );
+              })()}
+            </div>
+
+            <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                Showing {systemLogs.length} events (Circular buffer: Max 100)
+              </span>
+              <button onClick={() => setShowLogsModal(false)} className="btn btn-outline" style={{ padding: '0.45rem 1.25rem', fontSize: '0.85rem' }}>
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
