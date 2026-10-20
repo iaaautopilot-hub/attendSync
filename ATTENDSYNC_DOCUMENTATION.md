@@ -237,12 +237,7 @@ npm run build
 
 ```
 ├── .env                              # Environment variables (Supabase URL & Key)
-├── database_migration/               # Migration toolkit
-│   ├── 01_schema.sql                 # PostgreSQL DDL schema & RLS policies
-│   ├── 02_all_data.sql               # Complete SQL data inserts
-│   ├── export_data.js                # Data extraction utility
-│   ├── import_to_new_supabase.js     # Automated data batch uploader
-│   └── README.md                     # Database migration instructions
+├── .vercelignore                     # Production deployment exclusions
 ├── public/                           # Static assets (icon.png, favicon)
 ├── src/
 │   ├── App.jsx                       # Master routing & responsive navigation
@@ -264,6 +259,8 @@ npm run build
 │   └── utils/
 │       ├── departmentUtils.js        # Departmental permissions logic
 │       ├── pdfExport.js              # Compliance A4 PDF generation engine
+│       ├── recordUtils.js            # Standard record numbering logic (IAA/DEPT/TYPE/YEAR/ID)
+│       ├── systemLogger.js           # Lightweight client diagnostic logger
 │       └── timeUtils.js              # Aviation training hour calculation
 └── vercel.json                       # Vercel deployment routing configuration
 ```

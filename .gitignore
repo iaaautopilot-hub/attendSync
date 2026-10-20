@@ -28,8 +28,8 @@ dist-ssr
 .env.*.local
 .vercel
 
-# Migration large backups
-database_migration/backup_data/
-database_migration/02_*.sql
-database_migration/data_*.sql
+# Migration large backups & offline flows
+database_migration/
 backupdata/
+GAS Attendsync Flow/
+*.csv

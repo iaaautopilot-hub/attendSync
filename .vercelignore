@@ -1,0 +1,16 @@
+# Documentation & Metadata
+README.md
+ATTENDSYNC_DOCUMENTATION.md
+
+# Backups & Migration Toolkits
+database_migration/
+backupdata/
+GAS Attendsync Flow/
+*.csv
+*.sql
+*.json
+!package.json
+!package-lock.json
+
+# Environment
+.env.example
